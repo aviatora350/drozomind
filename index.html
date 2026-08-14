@@ -425,442 +425,342 @@
 </div>
 
 <script>
+  // SUPABASE CONFIGURATION & DISCORD LINK
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-  // Updated Discord Link
-  const DISCORD_INVITE_URL = "https://discord.gg/SaJMRJr4Y8";
+  const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjjFNmbL";
+  const DISCORD_INVITE_URL = "https://discord.gg/SaMJRr4Y8";
 
   const { createClient } = window.supabase;
-  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentUserId = null;
-  let currentUserEmail = null;
-  let authMode = 'login';
-  let turnstileToken = null;
-  let myTickets = [];
+  let currentUser = null;
+  let isSignupMode = false;
+  let activeTicket = null;
 
-  function onTurnstileSuccess(token) { turnstileToken = token; }
-
-  function setAuthMode(mode) {
-    authMode = mode;
-    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
-    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
-    document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
-  }
-
-  async function syncUserProfile(userId, userEmail) {
-    // Strictly restrict auto-admin: ONLY aviatorrudra@gmail.com gets admin by default. ALL others get 'user'.
-    const assignedRole = userEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
-
-    const { data: existingProfile } = await supabaseClient
-      .from('profiles')
-      .select('id, email, role')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (!existingProfile) {
-      await supabaseClient.from('profiles').insert([{
-        id: userId,
-        email: userEmail,
-        role: assignedRole
-      }]);
-    } else {
-      // Ensure email stays fresh in profiles table for older users
-      await supabaseClient.from('profiles').update({ email: userEmail }).eq('id', userId);
-    }
-  }
-
-  async function handleAuthSubmit() {
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value.trim();
-
-    if (!email || !password) return alert("Please enter both email and password.");
-
-    const options = turnstileToken ? { captchaToken: turnstileToken } : {};
-
-    if (authMode === 'signup') {
-      const { data, error } = await supabaseClient.auth.signUp({ email, password, options });
-      if (error) return alert("Sign-Up Error: " + error.message);
-      
-      if (data.user) {
-        await syncUserProfile(data.user.id, email);
-      }
-      alert("Account created successfully!");
-    } else {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options });
-      if (error) return alert("Login Error: " + error.message);
-      if (data.user) {
-        await syncUserProfile(data.user.id, data.user.email);
-      }
-    }
-
-    init();
-  }
-
-  async function init() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    if (!session) {
-      document.getElementById('auth-modal').style.display = 'flex';
-      return;
-    }
-
-    document.getElementById('auth-modal').style.display = 'none';
-    currentUserId = session.user.id;
-    currentUserEmail = session.user.email;
-
-    await syncUserProfile(currentUserId, currentUserEmail);
-
-    document.getElementById('header-user-email').innerText = currentUserEmail;
-    document.getElementById('profile-email-display').value = currentUserEmail;
-    document.getElementById('profile-id-display').value = currentUserId;
-
-    await loadMyTickets();
-    await loadChatMessages();
-    checkUnreadAdminMessages();
-    subscribeRealtime();
-  }
-
-  async function logoutUser() {
-    await supabaseClient.auth.signOut();
-    location.reload();
-  }
-
-  async function switchNavTab(tabName, btnEl) {
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
-
-    btnEl.classList.add('active');
-    document.getElementById(`view-${tabName}`).classList.add('active');
-
-    if (tabName === 'support') {
-      await supabaseClient
-        .from('chat_messages')
-        .update({ status: 'read' })
-        .eq('user_id', currentUserId)
-        .eq('sender_role', 'admin')
-        .eq('status', 'unread');
-
-      document.getElementById('support-unread-dot').classList.remove('show');
-    }
-  }
-
-  function formatInputTime(rawDatetime) {
-    if (!rawDatetime) return null;
-    return new Date(rawDatetime).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
-  }
-
-  async function loadMyTickets() {
-    const { data: tickets } = await supabaseClient
-      .from('tickets')
-      .select('*')
-      .eq('user_id', currentUserId)
-      .order('created_at', { ascending: false });
-
-    myTickets = tickets || [];
-    renderCancellationAlerts();
-    renderActivePipeline();
-    renderHistorySessions();
-    checkBookingRestrictions();
-  }
-
-  function checkBookingRestrictions() {
-    const activeTicket = myTickets.find(t => t.status !== 'Cancelled' && t.status !== 'Closed');
-    const noticeContainer = document.getElementById('booking-restriction-notice');
-    const submitBtn = document.getElementById('submit-booking-btn');
-
-    if (activeTicket) {
-      noticeContainer.innerHTML = `
-        <div class="warning-banner">
-          ⚠️ <strong>Active Booking In Progress (#TCK-${activeTicket.ticket_number})</strong><br>
-          You can only have one active session booking at a time. Please complete or cancel your current request before scheduling a new slot.
-        </div>
-      `;
-      if (submitBtn) submitBtn.disabled = true;
-    } else {
-      noticeContainer.innerHTML = '';
-      if (submitBtn) submitBtn.disabled = false;
-    }
-  }
-
-  function renderCancellationAlerts() {
-    const container = document.getElementById('cancellation-alert-container');
-    container.innerHTML = '';
-
-    const cancelledTicket = myTickets.find(t => 
-      (t.status === 'Cancelled' || t.status === 'Closed') && 
-      !localStorage.getItem(`dismissed_ticket_${t.id}`)
-    );
-
-    if (cancelledTicket) {
-      const alertBox = document.createElement('div');
-      alertBox.className = 'cancellation-banner';
-      alertBox.innerHTML = `
-        <div>
-          <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed by Admin</strong>
-          <p style="font-size: 13px; margin-top: 4px; line-height: 1.4;">
-            Your session <strong>#TCK-${cancelledTicket.ticket_number}</strong> was closed. <br>
-            <strong>Reason:</strong> ${cancelledTicket.admin_comment || 'No specific reason provided.'}
-          </p>
-        </div>
-        <button class="btn btn-danger btn-sm" onclick="dismissCancellationNotice('${cancelledTicket.id}')">Dismiss</button>
-      `;
-      container.appendChild(alertBox);
-    }
-  }
-
-  function dismissCancellationNotice(ticketId) {
-    localStorage.setItem(`dismissed_ticket_${ticketId}`, 'true');
-    renderCancellationAlerts();
-    renderActivePipeline();
-  }
-
-  function renderActivePipeline() {
-    const pipelineContainer = document.getElementById('pipeline-active-card');
-    
-    for (let i = 1; i <= 4; i++) {
-      document.getElementById(`step-${i}`).classList.remove('active');
-      document.getElementById(`circle-${i}`).innerText = i;
-    }
-
-    const activeTicket = myTickets.find(t => t.status !== 'Cancelled' && t.status !== 'Closed');
-
-    if (!activeTicket) {
-      pipelineContainer.innerHTML = `<div class="empty-state">No active booking found. Tap <strong>Book</strong> below to schedule a session.</div>`;
-      return;
-    }
-
-    const status = activeTicket.status || 'Submitted';
-
-    let stepNum = 1;
-    if (status === 'Slot Offered') stepNum = 2;
-    else if (status === 'Accepted' || status === 'Scheduled') stepNum = 3;
-    else if (status === 'Confirmed') stepNum = 4;
-
-    for (let i = 1; i <= stepNum; i++) {
-      const step = document.getElementById(`step-${i}`);
-      const circle = document.getElementById(`circle-${i}`);
-      step.classList.add('active');
-      if (i < stepNum || status === 'Confirmed') circle.innerText = '✓';
-    }
-
-    pipelineContainer.innerHTML = `
-      <div><strong>Ticket Ref:</strong> TCK-${activeTicket.ticket_number}</div>
-      <div><strong>Status:</strong> <span class="status-highlight ${status === 'Slot Offered' ? 'offered' : ''}">${status}</span></div>
-      ${activeTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${activeTicket.pref_time}</div>` : ''}
-      ${activeTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${activeTicket.offered_time}</div>` : ''}
-      ${activeTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${activeTicket.accepted_time}</div>` : ''}
-      ${activeTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${activeTicket.admin_comment}</em></div>` : ''}
-
-      ${(status === 'Accepted' || status === 'Confirmed') ? `
-        <div class="discord-card">
-          <div style="font-size: 15px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">🎉 Session Confirmed & Ready!</div>
-          <p style="font-size: 13px; color: var(--text-muted); line-height:1.4;">Your slot is locked for <strong>${activeTicket.accepted_time || activeTicket.offered_time}</strong>. Join the official Discord voice channel to meet your therapist.</p>
-          <button id="discord-join-btn" class="discord-btn" onclick="connectToDiscordServer()">
-            <span>💬 Connect to Discord Session</span>
-          </button>
-        </div>
-      ` : ''}
-
-      ${status === 'Slot Offered' ? `
-        <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; margin-top: 12px;">
-          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${activeTicket.offered_time}).</p>
-          <button class="btn" style="margin-top:0; margin-bottom:10px;" onclick="acceptOfferedSlot('${activeTicket.id}', '${activeTicket.offered_time}')">Accept Proposed Slot</button>
-          
-          <label>Or Counter-Propose Another Time:</label>
-          <input type="datetime-local" id="counter-time-input">
-          
-          <div style="display:flex; gap:10px; margin-top:10px;">
-            <button class="btn btn-secondary" style="margin-top:0;" onclick="proposeNewTime('${activeTicket.id}', ${activeTicket.negotiation_count || 0})">Submit Time</button>
-            <button class="btn btn-danger" style="margin-top:0;" onclick="cancelTicket('${activeTicket.id}')">Cancel Request</button>
-          </div>
-        </div>
-      ` : ''}
-    `;
-  }
-
-  function connectToDiscordServer() {
-    const btn = document.getElementById('discord-join-btn');
-    if (!btn) return;
-
-    btn.disabled = true;
-    btn.innerHTML = `🟡 Connecting to Discord...`;
-    btn.style.opacity = '0.85';
-
-    setTimeout(() => {
-      btn.innerHTML = `🟢 Connected! Opening...`;
-      btn.style.background = '#22c55e';
-      
-      setTimeout(() => {
-        window.open(DISCORD_INVITE_URL, "_blank");
-        btn.disabled = false;
-        btn.innerHTML = `💬 Connect to Discord Session`;
-        btn.style.background = 'var(--discord-purple)';
-        btn.style.opacity = '1';
-      }, 1000);
-    }, 1500);
-  }
-
-  function renderHistorySessions() {
-    const list = document.getElementById('sessions-history-list');
-    list.innerHTML = '';
-
-    if (myTickets.length === 0) {
-      list.innerHTML = `<div class="empty-state">No booking history recorded.</div>`;
-      return;
-    }
-
-    myTickets.forEach(t => {
-      const card = document.createElement('div');
-      card.style.cssText = 'background:var(--input-bg); border:1px solid var(--card-border); padding:14px; border-radius:10px; font-size:13px;';
-      card.innerHTML = `
-        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-          <strong>Ticket #TCK-${t.ticket_number}</strong>
-          <span class="status-highlight">${t.status}</span>
-        </div>
-        <div>Date/Time: ${t.accepted_time || t.offered_time || t.pref_time || 'N/A'}</div>
-      `;
-      list.appendChild(card);
+  // --- TIMEZONE & PRIVACY UTILITIES ---
+  function formatLocalDate(isoString) {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   }
 
-  async function submitBooking() {
-    const activeTicket = myTickets.find(t => t.status !== 'Cancelled' && t.status !== 'Closed');
-    if (activeTicket) {
-      return alert(`You already have an active booking (#TCK-${activeTicket.ticket_number}). Please complete or cancel your existing session before booking a new slot.`);
+  function maskEmail(email) {
+    if (!email || !email.includes('@')) return 'Anonymous User';
+    const [user, domain] = email.split('@');
+    if (user.length <= 2) return `${user[0]}*@${domain}`;
+    return `${user[0]}${'*'.repeat(user.length - 2)}${user[user.length - 1]}@${domain}`;
+  }
+
+  // --- AUTHENTICATION FLOW ---
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      handleUserSession(session.user);
     }
+    
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        handleUserSession(session.user);
+      } else {
+        showAuthUI();
+      }
+    });
+  });
 
-    const rawTime = document.getElementById('book-datetime').value;
-    const notes = document.getElementById('book-notes').value.trim();
-
-    if (!rawTime) return alert("Please select a date and time.");
-
-    const formattedTime = formatInputTime(rawTime);
-    const ticketNum = Math.floor(100000 + Math.random() * 900000);
-
-    await supabaseClient.from('tickets').insert([{
-      ticket_number: ticketNum.toString(),
-      user_id: currentUserId,
-      pref_time: formattedTime,
-      notes: notes,
-      status: 'Submitted',
-      negotiation_count: 0
-    }]);
-
-    alert("Session requested successfully!");
-    document.getElementById('book-datetime').value = '';
-    document.getElementById('book-notes').value = '';
-    switchNavTab('overview', document.querySelectorAll('.nav-item')[0]);
-    loadMyTickets();
+  function toggleAuthMode() {
+    isSignupMode = !isSignupMode;
+    document.getElementById('authTitle').innerText = isSignupMode ? 'Create Your Account' : 'Sign In to Client Portal';
+    document.getElementById('authSubtitle').innerText = isSignupMode ? 'Sign up to start requesting consultation slots' : 'Access your scheduled appointments and support chat';
+    document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Sign Up' : 'Sign In';
+    document.getElementById('authToggleBtn').innerText = isSignupMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
   }
 
-  async function acceptOfferedSlot(ticketId, offeredTime) {
-    await supabaseClient.from('tickets').update({ status: 'Accepted', accepted_time: offeredTime }).eq('id', ticketId);
-    loadMyTickets();
-  }
+  async function handleAuth(e) {
+    e.preventDefault();
+    const email = document.getElementById('authEmail').value;
+    const password = document.getElementById('authPassword').value;
 
-  async function proposeNewTime(ticketId, currentCount) {
-    const rawVal = document.getElementById('counter-time-input').value;
-    if (!rawVal) return alert("Select date and time.");
-
-    const newCount = currentCount + 1;
-    if (newCount >= 2) {
-      await supabaseClient.from('tickets').update({
-        status: 'Cancelled',
-        admin_comment: 'Auto-cancelled: Maximum negotiation limit (2 attempts) reached.',
-        negotiation_count: newCount
-      }).eq('id', ticketId);
-      alert("Session cancelled automatically because maximum negotiation attempts were reached.");
+    let result;
+    if (isSignupMode) {
+      result = await supabase.auth.signUp({ email, password });
     } else {
-      const formatted = formatInputTime(rawVal);
-      await supabaseClient.from('tickets').update({
-        status: 'Submitted',
-        pref_time: formatted,
-        offered_time: null,
-        negotiation_count: newCount
-      }).eq('id', ticketId);
+      result = await supabase.auth.signInWithPassword({ email, password });
     }
-    loadMyTickets();
+
+    if (result.error) {
+      alert(result.error.message);
+    } else if (result.data.user) {
+      await ensureUserProfile(result.data.user);
+      handleUserSession(result.data.user);
+    }
   }
 
-  async function cancelTicket(ticketId) {
-    await supabaseClient.from('tickets').update({ status: 'Cancelled', admin_comment: 'Cancelled by client.' }).eq('id', ticketId);
-    loadMyTickets();
+  async function ensureUserProfile(user) {
+    const assignedRole = user.email === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
+    
+    await supabase.from('profiles').upsert({
+      id: user.id,
+      email: user.email,
+      role: assignedRole
+    }, { onConflict: 'id' });
   }
 
-  async function loadChatMessages() {
-    const { data: msgs } = await supabaseClient
-      .from('chat_messages').select('*').eq('user_id', currentUserId).order('created_at', { ascending: true });
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    window.location.reload();
+  }
 
-    const container = document.getElementById('chat-messages-container');
-    container.innerHTML = '';
+  function handleUserSession(user) {
+    currentUser = user;
+    document.getElementById('authContainer').classList.add('hidden');
+    document.getElementById('portalContainer').classList.remove('hidden');
+    document.getElementById('logoutBtn').classList.remove('hidden');
+    document.getElementById('userEmailDisplay').innerText = maskEmail(user.email);
 
-    if (!msgs || msgs.length === 0) {
-      container.innerHTML = `<div class="empty-state">No messages exchanged yet.</div>`;
+    fetchUserBooking();
+    fetchChatMessages();
+    subscribeRealtimeChat();
+  }
+
+  function showAuthUI() {
+    currentUser = null;
+    document.getElementById('authContainer').classList.remove('hidden');
+    document.getElementById('portalContainer').classList.add('hidden');
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('userEmailDisplay').innerText = '';
+  }
+
+  // --- BOOKING PIPELINE & STRICT USER ISOLATION ---
+  async function fetchUserBooking() {
+    if (!currentUser) return;
+
+    // Filter ONLY tickets belonging to the logged-in user
+    const { data: tickets, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Error fetching tickets:", error);
       return;
     }
 
-    msgs.forEach(m => {
-      const bubble = document.createElement('div');
-      const isAdmin = m.sender_role === 'admin';
-      bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'user'}`;
-      bubble.innerText = m.message;
-      container.appendChild(bubble);
+    const active = tickets ? tickets.find(t => t.status !== 'closed') : null;
+    activeTicket = active;
+
+    if (active) {
+      document.getElementById('newBookingSection').classList.add('hidden');
+      document.getElementById('ticketDetails').classList.remove('hidden');
+
+      document.getElementById('ticketId').innerText = `#${active.id.slice(0, 8)}`;
+      document.getElementById('bookingDate').innerText = formatLocalDate(active.created_at);
+      document.getElementById('slotTime').innerText = active.offered_slot ? formatLocalDate(active.offered_slot) : 'Awaiting Slot Offer';
+      document.getElementById('ticketNotesText').innerText = active.notes || 'No notes attached.';
+
+      document.getElementById('ticketStatusBadge').innerText = active.status.replace('_', ' ');
+
+      if (active.admin_comment) {
+        document.getElementById('adminCommentBox').classList.remove('hidden');
+        document.getElementById('adminCommentText').innerText = active.admin_comment;
+      } else {
+        document.getElementById('adminCommentBox').classList.add('hidden');
+      }
+
+      updatePipelineUI(active.status);
+
+      if (active.status === 'slot_offered') {
+        document.getElementById('slotActionControls').classList.remove('hidden');
+      } else {
+        document.getElementById('slotActionControls').classList.add('hidden');
+      }
+
+      // SHOW DISCORD WIDGET WHEN SLOT IS ACCEPTED OR CONFIRMED
+      const discordWidget = document.getElementById('discordWidget');
+      if (discordWidget) {
+        if (active.status === 'accepted' || active.status === 'confirmed') {
+          discordWidget.classList.remove('hidden');
+          const discordBtn = document.getElementById('discordJoinBtn');
+          if (discordBtn) discordBtn.href = DISCORD_INVITE_URL;
+        } else {
+          discordWidget.classList.add('hidden');
+        }
+      }
+
+    } else {
+      document.getElementById('newBookingSection').classList.remove('hidden');
+      document.getElementById('ticketDetails').classList.add('hidden');
+      const discordWidget = document.getElementById('discordWidget');
+      if (discordWidget) discordWidget.classList.add('hidden');
+      document.getElementById('ticketStatusBadge').innerText = 'No Active Ticket';
+      resetPipelineUI();
+    }
+  }
+
+  function updatePipelineUI(status) {
+    const steps = ['step1', 'step2', 'step3', 'step4'];
+    steps.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.className = 'p-3.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-all flex flex-col items-center justify-center space-y-1';
+    });
+
+    if (status === 'submitted') {
+      const s1 = document.getElementById('step1');
+      if (s1) s1.className = 'p-3.5 rounded-xl border pipeline-step-active transition-all flex flex-col items-center justify-center space-y-1';
+    } else if (status === 'slot_offered') {
+      const s1 = document.getElementById('step1');
+      const s2 = document.getElementById('step2');
+      if (s1) s1.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
+      if (s2) s2.className = 'p-3.5 rounded-xl border pipeline-step-active transition-all flex flex-col items-center justify-center space-y-1';
+    } else if (status === 'accepted') {
+      const s1 = document.getElementById('step1');
+      const s2 = document.getElementById('step2');
+      const s3 = document.getElementById('step3');
+      if (s1) s1.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
+      if (s2) s2.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
+      if (s3) s3.className = 'p-3.5 rounded-xl border pipeline-step-active transition-all flex flex-col items-center justify-center space-y-1';
+    } else if (status === 'confirmed') {
+      ['step1', 'step2', 'step3', 'step4'].forEach(s => {
+        const el = document.getElementById(s);
+        if (el) el.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
+      });
+    }
+  }
+
+  function resetPipelineUI() {
+    const steps = ['step1', 'step2', 'step3', 'step4'];
+    steps.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.className = 'p-3.5 rounded-xl border border-slate-800 bg-slate-900/60 transition-all flex flex-col items-center justify-center space-y-1';
+    });
+  }
+
+  async function submitBookingRequest(e) {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    const notes = document.getElementById('bookingNotes').value;
+
+    const { error } = await supabase.from('tickets').insert([{
+      user_id: currentUser.id,
+      user_email: currentUser.email,
+      notes: notes,
+      status: 'submitted'
+    }]);
+
+    if (error) {
+      alert("Failed to submit ticket request: " + error.message);
+    } else {
+      document.getElementById('bookingNotes').value = '';
+      fetchUserBooking();
+    }
+  }
+
+  async function acceptOfferedSlot() {
+    if (!activeTicket) return;
+
+    const { error } = await supabase
+      .from('tickets')
+      .update({ status: 'accepted' })
+      .eq('id', activeTicket.id)
+      .eq('user_id', currentUser.id);
+
+    if (error) {
+      alert("Error accepting slot: " + error.message);
+    } else {
+      fetchUserBooking();
+    }
+  }
+
+  // --- SUPPORT CHAT IMPLEMENTATION ---
+  async function fetchChatMessages() {
+    if (!currentUser) return;
+
+    const { data: messages, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .order('created_at', { ascending: true });
+
+    if (error) return;
+
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (messages.length === 0) {
+      container.innerHTML = `<div class="text-center text-xs text-slate-500 py-8">No messages yet. Send a message to start a conversation.</div>`;
+      return;
+    }
+
+    messages.forEach(msg => {
+      const isMe = msg.sender_id === currentUser.id;
+      const msgEl = document.createElement('div');
+      msgEl.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+      msgEl.innerHTML = `
+        <div class="max-w-[80%] rounded-xl px-4 py-2.5 text-xs ${isMe ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' : 'bg-slate-800 text-slate-200 border border-slate-700/80'}">
+          ${msg.message}
+        </div>
+        <span class="text-[10px] text-slate-500 mt-1 px-1">${formatLocalDate(msg.created_at)}</span>
+      `;
+      container.appendChild(msgEl);
     });
 
     container.scrollTop = container.scrollHeight;
   }
 
-  async function sendChatMessage() {
-    const input = document.getElementById('chat-user-input');
-    const msg = input.value.trim();
-    if (!msg) return;
+  async function sendChatMessage(e) {
+    e.preventDefault();
+    const input = document.getElementById('chatInput');
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text || !currentUser) return;
 
-    await supabaseClient.from('chat_messages').insert([{
-      user_id: currentUserId,
-      sender_role: 'user',
-      message: msg,
-      status: 'unread'
+    const { error } = await supabase.from('chat_messages').insert([{
+      user_id: currentUser.id,
+      sender_id: currentUser.id,
+      message: text
     }]);
 
-    input.value = '';
-    loadChatMessages();
+    if (error) {
+      alert("Failed to send chat message: " + error.message);
+    } else {
+      input.value = '';
+      fetchChatMessages();
+    }
   }
 
-  async function checkUnreadAdminMessages() {
-    const { data: unread } = await supabaseClient
-      .from('chat_messages')
-      .select('id')
-      .eq('user_id', currentUserId)
-      .eq('sender_role', 'admin')
-      .eq('status', 'unread');
-
-    const dot = document.getElementById('support-unread-dot');
-    if (unread && unread.length > 0) dot.classList.add('show');
-    else dot.classList.remove('show');
-  }
-
-  function subscribeRealtime() {
-    const connBadge = document.getElementById('connection-status');
-
-    supabaseClient.channel('client-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadMyTickets())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
-        loadChatMessages();
-        checkUnreadAdminMessages();
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          connBadge.className = 'connection-badge connected';
-          connBadge.innerHTML = '🟢 Connected';
-        } else {
-          connBadge.className = 'connection-badge connecting';
-          connBadge.innerHTML = '🟡 Connecting...';
+  function subscribeRealtimeChat() {
+    supabase
+      .channel('client-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+        filter: `user_id=eq.${currentUser.id}`
+      }, (payload) => {
+        fetchChatMessages();
+        const badge = document.getElementById('unreadBadge');
+        if (payload.new.sender_id !== currentUser.id && badge) {
+          badge.classList.remove('hidden');
         }
-      });
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'tickets',
+        filter: `user_id=eq.${currentUser.id}`
+      }, () => {
+        fetchUserBooking();
+      })
+      .subscribe();
   }
-
-  init();
 </script>
 
 </body>
