@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Drozo-Mind Therapy - Client Portal</title>
   
   <!-- Fonts & Icons -->
@@ -26,89 +26,168 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
-    body { background: var(--bg-black); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+    html, body { width: 100%; max-width: 100vw; overflow-x: hidden; background: var(--bg-black); color: var(--text-primary); min-height: 100vh; }
+    body { display: flex; flex-direction: column; }
 
     .ambient-glow {
-      position: fixed; top: -100px; right: -100px; width: 400px; height: 400px;
+      position: fixed; top: -100px; right: -100px; width: 350px; height: 350px;
       background: radial-gradient(circle, var(--accent-lime-glow) 0%, transparent 70%);
       pointer-events: none; z-index: 0;
     }
 
     #toastContainer {
-      position: fixed; top: 20px; right: 20px; z-index: 9999;
-      display: flex; flex-direction: column; gap: 10px;
+      position: fixed; top: 15px; right: 15px; z-index: 99999;
+      display: flex; flex-direction: column; gap: 8px;
+      max-width: calc(100vw - 30px);
     }
     .toast {
       background: #121212; border: 1px solid var(--card-border); color: #fff;
-      padding: 12px 18px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transform: translateY(-10px);
-      transition: 0.3s ease; font-size: 0.9rem; font-weight: 500;
+      transition: 0.3s ease; font-size: 0.85rem; font-weight: 500; word-break: break-word;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
     .toast-error { border-color: #ef4444; color: #fca5a5; }
 
-    .auth-container { max-width: 440px; margin: 80px auto; background: var(--card-bg); backdrop-filter: blur(16px); padding: 35px; border-radius: 16px; border: 1px solid var(--card-border); box-shadow: 0 20px 40px rgba(0,0,0,0.9); width: 100%; z-index: 1; position: relative; }
-    .auth-tabs { display: flex; border-bottom: 1px solid var(--card-border); margin-bottom: 25px; }
-    .auth-tab-btn { flex: 1; padding: 12px; border: none; background: transparent; font-weight: 600; font-size: 0.95rem; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    /* AUTH SECTION */
+    .auth-container { 
+      max-width: 420px; margin: 60px auto; background: var(--card-bg); 
+      backdrop-filter: blur(16px); padding: 28px 22px; border-radius: 16px; 
+      border: 1px solid var(--card-border); box-shadow: 0 20px 40px rgba(0,0,0,0.9); 
+      width: calc(100% - 24px); z-index: 1; position: relative; 
+    }
+    .auth-tabs { display: flex; border-bottom: 1px solid var(--card-border); margin-bottom: 20px; }
+    .auth-tab-btn { flex: 1; padding: 12px; border: none; background: transparent; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
     .auth-tab-btn.active { color: var(--accent-lime); border-bottom: 2px solid var(--accent-lime); }
 
-    .dashboard-layout { display: flex; min-height: 100vh; width: 100%; z-index: 1; position: relative; }
-    .sidebar { width: 270px; background: #000000; color: white; padding: 25px 18px; border-right: 1px solid #18181b; display: flex; flex-direction: column; justify-content: space-between; }
-    .sidebar-brand { font-size: 1.25rem; font-weight: 700; color: var(--accent-lime); margin-bottom: 35px; display: flex; align-items: center; gap: 10px; }
+    /* DASHBOARD LAYOUT */
+    .dashboard-layout { display: flex; min-height: 100vh; width: 100vw; max-width: 100vw; z-index: 1; position: relative; overflow-x: hidden; }
+    
+    /* DESKTOP SIDEBAR */
+    .desktop-sidebar { width: 260px; background: #000000; color: white; padding: 25px 16px; border-right: 1px solid #18181b; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
+    .sidebar-brand { font-size: 1.2rem; font-weight: 700; color: var(--accent-lime); margin-bottom: 30px; display: flex; align-items: center; gap: 8px; }
     
     .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-    .nav-item { padding: 12px 16px; border-radius: 10px; cursor: pointer; color: var(--text-muted); font-weight: 500; font-size: 0.9rem; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+    .nav-item { padding: 12px 14px; border-radius: 10px; cursor: pointer; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
     .nav-item:hover, .nav-item.active { background: rgba(163, 230, 53, 0.1); color: var(--accent-lime); }
     .nav-item.admin-btn { background: var(--accent-lime-dark); color: var(--accent-lime); margin-top: 10px; font-weight: 600; border: 1px solid var(--accent-lime); }
 
-    .main-content { flex: 1; padding: 35px; overflow-y: auto; background: var(--bg-black); display: flex; flex-direction: column; justify-content: space-between; }
-    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: var(--card-bg); backdrop-filter: blur(12px); padding: 18px 25px; border-radius: 12px; border: 1px solid var(--card-border); }
-    
-    .page { display: none; }
-    .page.active-page { display: block; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    /* MOBILE NAVIGATION BAR */
+    .mobile-bottom-nav { display: none; }
 
-    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
-    .card h3 { font-size: 1.05rem; color: var(--text-primary); margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .main-content { flex: 1; padding: 30px; overflow-y: auto; background: var(--bg-black); display: flex; flex-direction: column; justify-content: space-between; min-width: 0; max-width: 100%; }
+    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); backdrop-filter: blur(12px); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--card-border); gap: 10px; }
+    
+    .page { display: none; width: 100%; }
+    .page.active-page { display: block; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); word-wrap: break-word; overflow: hidden; }
+    .card h3 { font-size: 1rem; color: var(--text-primary); margin-bottom: 14px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 
     label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
-    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 18px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; transition: 0.2s; color-scheme: dark; }
+    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; transition: 0.2s; color-scheme: dark; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
 
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
 
-    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+    .btn { padding: 11px 18px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.88rem; min-height: 44px; }
     .btn-lime { background: var(--accent-lime); color: #000000; font-weight: 700; }
-    .btn-lime:hover { background: var(--accent-lime-hover); transform: translateY(-1px); }
+    .btn-lime:hover { background: var(--accent-lime-hover); }
     .btn-danger { background: #ef4444; color: white; }
 
-    .stepper { display: flex; justify-content: space-between; position: relative; margin: 25px 0 10px 0; }
+    /* BOOKING STEPPER (DESKTOP DEFAULT) */
+    .stepper { display: flex; justify-content: space-between; position: relative; margin: 20px 0; width: 100%; }
     .stepper::before { content: ''; position: absolute; top: 18px; left: 10%; right: 10%; height: 2px; background: var(--card-border); z-index: 0; }
     .step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
-    .step-icon { width: 38px; height: 38px; border-radius: 50%; background: #18181b; border: 2px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: bold; transition: 0.3s; }
+    .step-icon { width: 36px; height: 36px; border-radius: 50%; background: #18181b; border: 2px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: bold; transition: 0.3s; flex-shrink: 0; }
     .step.active .step-icon { background: var(--accent-lime); border-color: var(--accent-lime); color: #000; box-shadow: 0 0 15px var(--accent-lime-glow); }
     .step.completed .step-icon { background: var(--accent-lime-dark); border-color: var(--accent-lime); color: var(--accent-lime); }
     .step-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-align: center; }
     .step.active .step-label { color: var(--accent-lime); }
 
-    .chat-box { height: 320px; border: 1px solid var(--card-border); border-radius: 10px; padding: 15px; overflow-y: auto; background: #000000; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
-    .chat-msg { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
+    .chat-box { height: 300px; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; overflow-y: auto; background: #000000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
     .chat-msg.user { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; border-bottom-right-radius: 2px; }
     .chat-msg.admin { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 2px; }
 
-    .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
     .badge-pending { background: #422006; color: #fef08a; border: 1px solid #854d0e; }
     .badge-success { background: #1a2e05; color: var(--accent-lime); border: 1px solid var(--accent-lime-dark); }
     
-    .alert { padding: 16px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .alert { padding: 14px; border-radius: 10px; font-size: 0.88rem; margin-bottom: 16px; display: flex; align-items: flex-start; gap: 10px; word-break: break-word; }
     .alert-danger { background: #2a0808; border: 1px solid #991b1b; color: #fca5a5; }
     .alert-info { background: #0d2104; border: 1px solid var(--accent-lime-dark); color: var(--accent-lime); }
     .alert-warning { background: #2f1704; border: 1px solid #854d0e; color: #fef08a; }
 
-    .footer { text-align: center; padding: 20px 0 10px 0; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 30px; }
+    .footer { text-align: center; padding: 16px 0 10px 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 20px; }
     .hidden { display: none !important; }
+
+    /* ===================================================
+       MOBILE NATIVE RESPONSIVE FIXES (Max Width: 768px)
+       =================================================== */
+    @media (max-width: 768px) {
+      .auth-container { margin: 20px auto; padding: 20px 16px; }
+      .dashboard-layout { flex-direction: column; width: 100vw; max-width: 100vw; overflow-x: hidden; }
+      
+      /* HIDE DESKTOP SIDEBAR ON MOBILE */
+      .desktop-sidebar { display: none !important; }
+
+      /* SHOW FIXED BOTTOM NAVIGATION ON MOBILE */
+      .mobile-bottom-nav {
+        display: flex !important;
+        position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+        background: #09090b; border-top: 1px solid var(--card-border);
+        z-index: 9999; justify-content: space-around; align-items: center;
+        padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+      }
+      .mobile-bottom-nav .nav-item {
+        flex-direction: column; align-items: center; justify-content: center;
+        font-size: 0.65rem; color: var(--text-muted); gap: 3px; flex: 1;
+        padding: 6px 0; border-radius: 0; text-align: center;
+      }
+      .mobile-bottom-nav .nav-item.active {
+        color: var(--accent-lime); background: transparent;
+      }
+      .mobile-bottom-nav .nav-item i { width: 20px; height: 20px; }
+
+      .main-content { padding: 14px 12px 80px 12px !important; width: 100vw !important; max-width: 100vw !important; overflow-x: hidden !important; }
+      .top-header { flex-direction: column; align-items: flex-start; padding: 12px; gap: 6px; }
+      
+      .form-grid { grid-template-columns: 1fr; gap: 0; }
+      input, select, textarea { font-size: 16px !important; } /* Prevent iOS Auto-Zoom */
+
+      /* MOBILE VERTICAL TIMELINE STEPPER */
+      .stepper {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+        padding-left: 12px;
+        margin: 15px 0;
+      }
+      .stepper::before {
+        top: 15px;
+        bottom: 15px;
+        left: 29px;
+        right: auto;
+        width: 2px;
+        height: auto;
+      }
+      .step {
+        flex-direction: row;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        justify-content: flex-start;
+      }
+      .step-icon { width: 34px; height: 34px; font-size: 0.8rem; }
+      .step-label { text-align: left; font-size: 0.85rem; }
+
+      #chatSendForm { flex-direction: column; }
+      #sendDmBtn { width: 100%; }
+      .card { padding: 14px; }
+    }
   </style>
 </head>
 <body>
@@ -118,11 +197,11 @@
 
   <!-- AUTH SECTION -->
   <div id="authSection" class="auth-container">
-    <div style="text-align: center; margin-bottom: 25px;">
-      <h2 style="color: var(--accent-lime); display: flex; align-items: center; justify-content: center; gap: 8px;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2 style="color: var(--accent-lime); display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.3rem;">
         <i data-lucide="brain"></i> Drozo-Mind Therapy
       </h2>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Client Portal Access</p>
+      <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 4px;">Client Portal Access</p>
     </div>
 
     <div class="auth-tabs">
@@ -146,40 +225,51 @@
       <button type="submit" class="btn btn-lime" style="width: 100%;"><i data-lucide="user-plus"></i> Create Account</button>
     </form>
     
-    <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px;">
+    <div style="text-align: center; font-size: 0.72rem; color: var(--text-muted); margin-top: 20px;">
       © 2026 Drozo-Mind Therapy By Drozo . All rights reserved.
     </div>
   </div>
 
   <!-- DASHBOARD SECTION -->
   <div id="dashboardSection" class="dashboard-layout hidden">
-    <aside class="sidebar">
+    
+    <!-- DESKTOP SIDEBAR -->
+    <aside class="desktop-sidebar">
       <div>
         <div class="sidebar-brand">
           <i data-lucide="brain"></i> Drozo-Mind
         </div>
         <ul class="nav-menu">
-          <li class="nav-item active" onclick="navigateTo('pageOverview', this)"><i data-lucide="layout-dashboard"></i> Overview</li>
-          <li class="nav-item" onclick="navigateTo('pageBookSession', this)"><i data-lucide="calendar"></i> Book Session</li>
-          <li class="nav-item" onclick="navigateTo('pageSupportChat', this)"><i data-lucide="message-square"></i> Support Chat</li>
-          <li class="nav-item" onclick="navigateTo('pageTickets', this)"><i data-lucide="ticket"></i> My Sessions</li>
-          <li class="nav-item" onclick="navigateTo('pageSettings', this)"><i data-lucide="settings"></i> Settings</li>
-          <li id="adminSidebarBtn" class="nav-item admin-btn hidden" onclick="window.location.href='admin.html'"><i data-lucide="shield"></i> Admin Panel</li>
+          <li class="nav-item active" onclick="navigateTo('pageOverview', this)"><i data-lucide="layout-dashboard"></i> <span>Overview</span></li>
+          <li class="nav-item" onclick="navigateTo('pageBookSession', this)"><i data-lucide="calendar"></i> <span>Book</span></li>
+          <li class="nav-item" onclick="navigateTo('pageSupportChat', this)"><i data-lucide="message-square"></i> <span>Support</span></li>
+          <li class="nav-item" onclick="navigateTo('pageTickets', this)"><i data-lucide="ticket"></i> <span>Sessions</span></li>
+          <li class="nav-item" onclick="navigateTo('pageSettings', this)"><i data-lucide="settings"></i> <span>Profile</span></li>
+          <li id="adminSidebarBtn" class="nav-item admin-btn hidden" onclick="window.location.href='admin.html'"><i data-lucide="shield"></i> <span>Admin</span></li>
         </ul>
       </div>
       <div>
-        <button onclick="handleSignOut()" class="btn btn-danger" style="width: 100%; font-size: 0.85rem;"><i data-lucide="log-out"></i> Sign Out</button>
+        <button onclick="handleSignOut()" class="btn btn-danger" style="width: 100%; font-size: 0.82rem;"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
     </aside>
+
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="mobile-bottom-nav">
+      <div class="nav-item active" onclick="navigateTo('pageOverview', this)"><i data-lucide="layout-dashboard"></i><span>Overview</span></div>
+      <div class="nav-item" onclick="navigateTo('pageBookSession', this)"><i data-lucide="calendar"></i><span>Book</span></div>
+      <div class="nav-item" onclick="navigateTo('pageSupportChat', this)"><i data-lucide="message-square"></i><span>Support</span></div>
+      <div class="nav-item" onclick="navigateTo('pageTickets', this)"><i data-lucide="ticket"></i><span>Sessions</span></div>
+      <div class="nav-item" onclick="navigateTo('pageSettings', this)"><i data-lucide="settings"></i><span>Profile</span></div>
+    </nav>
 
     <main class="main-content">
       <div>
         <div class="top-header">
-          <h2 id="pageTitle" style="color: var(--accent-lime); font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+          <h2 id="pageTitle" style="color: var(--accent-lime); font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
             <i data-lucide="layout-dashboard"></i> Overview
           </h2>
-          <div style="font-size: 0.9rem;">
-            Signed in: <strong id="userEmailDisplay" style="color: var(--accent-lime);"></strong>
+          <div style="font-size: 0.8rem; word-break: break-all;">
+            User: <strong id="userEmailDisplay" style="color: var(--accent-lime);"></strong>
           </div>
         </div>
 
@@ -189,21 +279,21 @@
         <div id="pageOverview" class="page active-page">
           <div class="card">
             <h3><i data-lucide="sparkles"></i> Welcome to Drozo-Mind Therapy</h3>
-            <p style="color: var(--text-muted); font-size: 0.9rem;">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</p>
+            <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.4;">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</p>
           </div>
 
           <div class="card">
             <h3><i data-lucide="activity"></i> Active Session Pipeline</h3>
             
             <div id="stepperContainer" class="stepper hidden">
-              <div id="step1" class="step"><div class="step-icon"><i data-lucide="file-text"></i></div><div class="step-label">Submitted</div></div>
-              <div id="step2" class="step"><div class="step-icon"><i data-lucide="clock"></i></div><div class="step-label">Slot Offered</div></div>
-              <div id="step3" class="step"><div class="step-icon"><i data-lucide="check-circle"></i></div><div class="step-label">Scheduled</div></div>
-              <div id="step4" class="step"><div class="step-icon"><i data-lucide="check"></i></div><div class="step-label">Confirmed</div></div>
+              <div id="step1" class="step"><div class="step-icon"><i data-lucide="file-text"></i></div><div class="step-label">1. Submitted</div></div>
+              <div id="step2" class="step"><div class="step-icon"><i data-lucide="clock"></i></div><div class="step-label">2. Slot Offered</div></div>
+              <div id="step3" class="step"><div class="step-icon"><i data-lucide="check-circle"></i></div><div class="step-label">3. Scheduled</div></div>
+              <div id="step4" class="step"><div class="step-icon"><i data-lucide="check"></i></div><div class="step-label">4. Confirmed</div></div>
             </div>
 
             <div id="overviewTicketSummary" style="margin-top: 15px;">
-              <p style="color: var(--text-muted); font-size: 0.9rem;">No active therapy sessions pending.</p>
+              <p style="color: var(--text-muted); font-size: 0.88rem;">No active therapy sessions pending.</p>
             </div>
           </div>
         </div>
@@ -239,21 +329,21 @@
             <i data-lucide="lock"></i>
             <div>
               <h4>Support Thread Closed</h4>
-              <p style="font-size: 0.85rem; margin-top: 4px;">An administrator marked this support ticket as resolved.</p>
-              <button onclick="confirmAdminDmClose()" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">Dismiss Notice</button>
+              <p style="font-size: 0.82rem; margin-top: 4px;">An administrator marked this support ticket as resolved.</p>
+              <button onclick="confirmAdminDmClose()" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.78rem; margin-top: 8px;">Dismiss Notice</button>
             </div>
           </div>
 
           <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
               <h3><i data-lucide="message-square"></i> Live Support Chat</h3>
-              <button id="userCloseDmBtn" onclick="closeUserDM()" class="btn btn-danger hidden" style="padding: 6px 12px; font-size: 0.8rem;"><i data-lucide="lock"></i> Close DM</button>
+              <button id="userCloseDmBtn" onclick="closeUserDM()" class="btn btn-danger hidden" style="padding: 6px 12px; font-size: 0.78rem;"><i data-lucide="lock"></i> Close DM</button>
             </div>
-            <p id="dmStatusNotice" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"></p>
+            <p id="dmStatusNotice" style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;"></p>
             <div class="chat-box" id="chatContainer"></div>
-            <form id="chatSendForm" onsubmit="sendMessage(event)" style="display: flex; gap: 10px;">
+            <form id="chatSendForm" onsubmit="sendMessage(event)" style="display: flex; gap: 8px;">
               <input type="text" id="chatMessageInput" placeholder="Type message..." style="margin-bottom: 0;" required>
-              <button type="submit" id="sendDmBtn" class="btn btn-lime"><i data-lucide="send"></i></button>
+              <button type="submit" id="sendDmBtn" class="btn btn-lime"><i data-lucide="send"></i> Send</button>
             </form>
           </div>
         </div>
@@ -263,7 +353,7 @@
           <div class="card">
             <h3><i data-lucide="ticket"></i> Current Ticket Details</h3>
             <div id="ticketCardDetails">
-              <p style="color: var(--text-muted); font-size: 0.9rem;">No active tickets found.</p>
+              <p style="color: var(--text-muted); font-size: 0.88rem;">No active tickets found.</p>
             </div>
           </div>
         </div>
@@ -272,8 +362,9 @@
         <div id="pageSettings" class="page">
           <div class="card">
             <h3><i data-lucide="user"></i> Account Profile</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>Email:</strong> <span id="settingsEmail"></span></p>
-            <p style="font-size: 0.9rem;"><strong>Role:</strong> <span id="userRoleDisplay" class="badge badge-success">Client</span></p>
+            <p style="font-size: 0.88rem; margin-bottom: 8px; word-break: break-all;"><strong>Email:</strong> <span id="settingsEmail"></span></p>
+            <p style="font-size: 0.88rem; margin-bottom: 16px;"><strong>Role:</strong> <span id="userRoleDisplay" class="badge badge-success">Client</span></p>
+            <button onclick="handleSignOut()" class="btn btn-danger" style="width: 100%; font-size: 0.85rem;"><i data-lucide="log-out"></i> Sign Out</button>
           </div>
         </div>
       </div>
@@ -306,7 +397,6 @@
       }, 4000);
     }
 
-    // Populate Timezone Dropdown dynamically
     function populateTimezones() {
       const select = document.getElementById('timezoneInput');
       select.innerHTML = '';
@@ -332,7 +422,6 @@
       });
     }
 
-    // Convert local datetime string + target timezone to accurate UTC ISO String
     function getISOWithTimezone(dateTimeStr, timeZone) {
       if (!dateTimeStr) return null;
       const [datePart, timePart] = dateTimeStr.split('T');
@@ -376,11 +465,14 @@
     function navigateTo(pageId, navElement) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
       document.getElementById(pageId).classList.add('active-page');
+      
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
       if (navElement) {
-        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
         navElement.classList.add('active');
       }
+
       if (pageId === 'pageSupportChat') fetchChatMessages();
+      window.scrollTo(0, 0);
       lucide.createIcons();
     }
 
@@ -490,8 +582,8 @@
           <div class="alert alert-danger" style="margin-top: 10px;">
             <div>
               <h4 style="margin-bottom: 5px;">📢 Ticket Closed (${activeTicket.ticket_number})</h4>
-              <p style="font-size: 0.9rem; margin-bottom: 12px;"><strong>Admin Reason:</strong> ${activeTicket.admin_comment}</p>
-              <button onclick="dismissClosedNotification('${activeTicket.id}')" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.8rem;">Dismiss & Clear</button>
+              <p style="font-size: 0.88rem; margin-bottom: 12px;"><strong>Admin Reason:</strong> ${activeTicket.admin_comment}</p>
+              <button onclick="dismissClosedNotification('${activeTicket.id}')" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.78rem;">Dismiss & Clear</button>
             </div>
           </div>
         `;
@@ -503,8 +595,8 @@
       }
 
       if (activeTicket.status === 'Closed') {
-        document.getElementById('overviewTicketSummary').innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">No active therapy sessions pending.</p>`;
-        document.getElementById('ticketCardDetails').innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">No active tickets found.</p>`;
+        document.getElementById('overviewTicketSummary').innerHTML = `<p style="color: var(--text-muted); font-size: 0.88rem;">No active therapy sessions pending.</p>`;
+        document.getElementById('ticketCardDetails').innerHTML = `<p style="color: var(--text-muted); font-size: 0.88rem;">No active tickets found.</p>`;
         document.getElementById('stepperContainer').classList.add('hidden');
         document.getElementById('submitBtn').disabled = false;
         return;
@@ -512,7 +604,6 @@
 
       updateStepperUI(activeTicket.status);
 
-      // Display formatted ISO Timestamps with timezone
       const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       
       let displayPrefTime = activeTicket.pref_time || 'N/A';
@@ -526,30 +617,30 @@
       }
 
       const content = `
-        <div style="background: #09090b; padding: 18px; border-radius: 10px; border: 1px solid var(--card-border);">
-          <p style="font-size: 0.9rem; margin-bottom: 6px;"><strong>Ticket Reference:</strong> ${activeTicket.ticket_number}</p>
-          <p style="font-size: 0.9rem; margin-bottom: 10px;"><strong>Status:</strong> <span class="badge badge-pending">${activeTicket.status}</span></p>
-          <p style="font-size: 0.85rem; color: var(--text-muted);"><strong>Preferred Slot:</strong> ${displayPrefTime}</p>
+        <div style="background: #09090b; padding: 14px; border-radius: 10px; border: 1px solid var(--card-border);">
+          <p style="font-size: 0.88rem; margin-bottom: 6px;"><strong>Ticket Reference:</strong> ${activeTicket.ticket_number}</p>
+          <p style="font-size: 0.88rem; margin-bottom: 10px;"><strong>Status:</strong> <span class="badge badge-pending">${activeTicket.status}</span></p>
+          <p style="font-size: 0.82rem; color: var(--text-muted);"><strong>Preferred Slot:</strong> ${displayPrefTime}</p>
           
           ${activeTicket.status === 'Time Slot Offered' ? `
-            <div class="alert alert-info" style="margin-top: 15px; flex-direction: column;">
+            <div class="alert alert-info" style="margin-top: 14px; flex-direction: column;">
               <h4><i data-lucide="clock"></i> Admin Proposed Time Slot:</h4>
-              <p style="font-size: 1rem; font-weight: bold; margin: 8px 0; color: var(--accent-lime);">
+              <p style="font-size: 0.95rem; font-weight: bold; margin: 8px 0; color: var(--accent-lime); word-break: break-word;">
                 ${displayOfferedTime}
               </p>
-              <div>
-                <button onclick="respondToOffer(true)" class="btn btn-lime"><i data-lucide="check"></i> Accept</button>
-                <button onclick="respondToOffer(false)" class="btn btn-danger" style="margin-left: 8px;"><i data-lucide="x"></i> Reject</button>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%;">
+                <button onclick="respondToOffer(true)" class="btn btn-lime" style="flex: 1;"><i data-lucide="check"></i> Accept</button>
+                <button onclick="respondToOffer(false)" class="btn btn-danger" style="flex: 1;"><i data-lucide="x"></i> Reject</button>
               </div>
             </div>
           ` : ''}
 
           ${activeTicket.status === 'Scheduled' ? `
-            <div class="alert alert-info" style="margin-top: 15px; flex-direction: column; text-align: center; align-items: center;">
+            <div class="alert alert-info" style="margin-top: 14px; flex-direction: column; text-align: center; align-items: center;">
               <h4>🎉 Therapy Session Confirmed!</h4>
-              <p style="margin: 6px 0 14px 0; font-size: 0.9rem;">Scheduled Slot: <strong>${displayOfferedTime || displayPrefTime}</strong></p>
-              <div>
-                <a href="https://discord.gg/ChmhSPy6RR" target="_blank" class="btn btn-lime" style="background: #5865F2; color: white; text-decoration: none;">
+              <p style="margin: 6px 0 14px 0; font-size: 0.88rem; word-break: break-word;">Scheduled Slot: <strong>${displayOfferedTime || displayPrefTime}</strong></p>
+              <div style="width: 100%;">
+                <a href="https://discord.gg/ChmhSPy6RR" target="_blank" class="btn btn-lime" style="background: #5865F2; color: white; text-decoration: none; width: 100%;">
                   <i data-lucide="message-square"></i> Join Community Discord
                 </a>
               </div>
@@ -577,7 +668,6 @@
 
       if (!timeVal) return showToast('Please select a date and time', 'error');
 
-      // Convert local datetime + target timezone to accurate UTC ISO String
       const isoTimestamp = getISOWithTimezone(timeVal, selectedTz);
       const ticketNumber = 'TCK-' + Math.floor(100000 + Math.random() * 900000);
 
