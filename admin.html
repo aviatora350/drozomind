@@ -87,7 +87,7 @@
     .action-row:last-child { margin-bottom: 0; }
     
     label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px; }
-    input[type="datetime-local"], input[type="text"], select { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
+    input[type="datetime-local"], input[type="text"], input[type="password"], select { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
 
     .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -197,12 +197,40 @@
       flex-shrink: 0;
     }
 
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(8px); z-index: 9999; display: flex;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .pin-card {
+      background: var(--card-bg); border: 1px solid var(--card-border);
+      border-radius: 16px; padding: 28px; width: 100%; max-width: 360px;
+      text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .pin-input {
+      font-size: 24px; letter-spacing: 12px; text-align: center;
+      padding: 12px; border-radius: 10px; background: var(--input-bg);
+      border: 1px solid var(--input-border); color: var(--primary);
+      width: 100%; margin: 16px 0; outline: none;
+    }
+
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   </style>
 </head>
 <body>
 
-<div class="container">
+<!-- PIN VERIFICATION MODAL -->
+<div id="pin-modal" class="modal-overlay" style="display: flex;">
+  <div class="pin-card">
+    <div style="font-size: 38px; margin-bottom: 8px;">🔐</div>
+    <h2 style="font-size: 20px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">Admin Access</h2>
+    <p style="font-size: 13px; color: var(--text-muted);">Enter 4-digit PIN to unlock control panel.</p>
+    <input type="password" id="admin-pin-input" class="pin-input" maxlength="4" placeholder="••••" onkeydown="if(event.key==='Enter') verifyAdminPin()">
+    <button class="btn btn-accept" style="width: 100%; margin-top: 4px;" onclick="verifyAdminPin()">Unlock Dashboard</button>
+  </div>
+</div>
+
+<div class="container" id="admin-dashboard-container" style="display: none;">
   <header>
     <div style="display: flex; align-items: center; gap: 16px;">
       <div class="logo-title">🛡️ Drozo Mind - Therapy - Admin Panel</div>
@@ -268,6 +296,7 @@
 <script>
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
+  const ADMIN_PIN = "1234"; // 4-Digit Security Access PIN
 
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -278,6 +307,30 @@
   let allMessages = [];
   let activeChatUserId = null;
   let isSendingAdmin = false;
+
+  function verifyAdminPin() {
+    const input = document.getElementById('admin-pin-input').value;
+    if (input === ADMIN_PIN) {
+      sessionStorage.setItem('admin_pin_verified', 'true');
+      document.getElementById('pin-modal').style.display = 'none';
+      document.getElementById('admin-dashboard-container').style.display = 'block';
+      init();
+    } else {
+      alert("❌ Incorrect PIN. Access Denied.");
+      document.getElementById('admin-pin-input').value = '';
+    }
+  }
+
+  function checkPinAuth() {
+    if (sessionStorage.getItem('admin_pin_verified') === 'true') {
+      document.getElementById('pin-modal').style.display = 'none';
+      document.getElementById('admin-dashboard-container').style.display = 'block';
+      init();
+    } else {
+      document.getElementById('pin-modal').style.display = 'flex';
+      document.getElementById('admin-dashboard-container').style.display = 'none';
+    }
+  }
 
   function formatLocalDateTime(isoString) {
     if (!isoString) return 'None';
@@ -332,6 +385,7 @@
   }
 
   async function adminSignOut() {
+    sessionStorage.removeItem('admin_pin_verified');
     await supabaseClient.auth.signOut();
     window.location.href = "index.html";
   }
@@ -404,8 +458,8 @@
           <div class="header-actions">
             <span class="status-badge ${isAdmin ? 'admin-role' : 'user-role'}">${isAdmin ? '🛡️ Administrator' : '👤 Client'}</span>
             ${isAdmin ? 
-              `<button class="btn btn-demote" ${isSelf ? 'disabled style="opacity:0.5; cursor:not-allowed;" title="You cannot demote yourself"' : ''} onclick="updateUserRole('${user.id}', 'user')">Demote to Client</button>` : 
-              `<button class="btn btn-promote" onclick="updateUserRole('${user.id}', 'admin')">👑 Make Admin</button>`
+              `<button class="btn btn-demote" ${isSelf ? 'disabled style="opacity:0.5; cursor:not-allowed;" title="You cannot demote yourself"' : ''} onclick="updateUserRole('${user.id}', 'user', '${user.email || ''}')">Demote to Client</button>` : 
+              `<button class="btn btn-promote" onclick="updateUserRole('${user.id}', 'admin', '${user.email || ''}')">👑 Make Admin</button>`
             }
           </div>
         </div>
@@ -419,7 +473,8 @@
     });
   }
 
-  async function updateUserRole(userId, newRole) {
+  // FIXED: Uses UPSERT strategy to guarantee roles persist cleanly
+  async function updateUserRole(userId, newRole, userEmail) {
     if (userId === currentAdminId && newRole === 'user') {
       return alert("Action blocked: You cannot demote your own active admin account.");
     }
@@ -429,12 +484,16 @@
 
     const { error } = await supabaseClient
       .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId);
+      .upsert({ 
+        id: userId,
+        email: userEmail || undefined,
+        role: newRole 
+      });
 
     if (error) {
       alert("Failed to update role: " + error.message);
     } else {
+      alert(`User permissions successfully updated to: ${newRole.toUpperCase()}`);
       await loadUsers();
       renderTickets();
     }
@@ -804,7 +863,7 @@
       });
   }
 
-  init();
+  checkPinAuth();
 </script>
 </body>
 </html>
