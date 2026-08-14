@@ -432,10 +432,17 @@
 
   const { createClient } = window.supabase;
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = supabase; // Fallback for legacy calls
 
   let currentUser = null;
-  let isSignupMode = false;
+  let authMode = 'login'; // 'login' or 'signup'
   let activeTicket = null;
+  let turnstileToken = null;
+
+  // --- CLOUDFLARE TURNSTILE CALLBACK ---
+  window.onTurnstileSuccess = function(token) {
+    turnstileToken = token;
+  };
 
   // --- TIMEZONE & PRIVACY UTILITIES ---
   function formatLocalDate(isoString) {
@@ -457,37 +464,41 @@
     return `${user[0]}${'*'.repeat(user.length - 2)}${user[user.length - 1]}@${domain}`;
   }
 
-  // --- AUTHENTICATION FLOW ---
-  window.addEventListener('DOMContentLoaded', async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      handleUserSession(session.user);
+  // --- AUTHENTICATION MODE TAB SWITCHING ---
+  window.setAuthMode = function(mode) {
+    authMode = mode;
+    const loginTab = document.getElementById('tab-login');
+    const signupTab = document.getElementById('tab-signup');
+    const submitBtn = document.getElementById('auth-submit-btn');
+
+    if (mode === 'login') {
+      if (loginTab) loginTab.classList.add('active');
+      if (signupTab) signupTab.classList.remove('active');
+      if (submitBtn) submitBtn.innerText = 'Sign In';
+    } else {
+      if (signupTab) signupTab.classList.add('active');
+      if (loginTab) loginTab.classList.remove('active');
+      if (submitBtn) submitBtn.innerText = 'Create Account';
     }
-    
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        handleUserSession(session.user);
-      } else {
-        showAuthUI();
-      }
-    });
-  });
+  };
 
-  function toggleAuthMode() {
-    isSignupMode = !isSignupMode;
-    document.getElementById('authTitle').innerText = isSignupMode ? 'Create Your Account' : 'Sign In to Client Portal';
-    document.getElementById('authSubtitle').innerText = isSignupMode ? 'Sign up to start requesting consultation slots' : 'Access your scheduled appointments and support chat';
-    document.getElementById('authSubmitBtn').innerText = isSignupMode ? 'Sign Up' : 'Sign In';
-    document.getElementById('authToggleBtn').innerText = isSignupMode ? 'Already have an account? Sign In' : "Don't have an account? Sign Up";
-  }
+  // --- AUTHENTICATION SUBMIT HANDLER ---
+  window.handleAuthSubmit = async function() {
+    const emailInput = document.getElementById('auth-email');
+    const passwordInput = document.getElementById('auth-password');
 
-  async function handleAuth(e) {
-    e.preventDefault();
-    const email = document.getElementById('authEmail').value;
-    const password = document.getElementById('authPassword').value;
+    if (!emailInput || !passwordInput) return;
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!email || !password) {
+      alert("Please enter both email and password.");
+      return;
+    }
 
     let result;
-    if (isSignupMode) {
+    if (authMode === 'signup') {
       result = await supabase.auth.signUp({ email, password });
     } else {
       result = await supabase.auth.signInWithPassword({ email, password });
@@ -499,7 +510,25 @@
       await ensureUserProfile(result.data.user);
       handleUserSession(result.data.user);
     }
-  }
+  };
+
+  // --- SESSION INITIALIZATION ---
+  window.addEventListener('DOMContentLoaded', async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      handleUserSession(session.user);
+    } else {
+      showAuthUI();
+    }
+    
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        handleUserSession(session.user);
+      } else {
+        showAuthUI();
+      }
+    });
+  });
 
   async function ensureUserProfile(user) {
     const assignedRole = user.email === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
@@ -511,17 +540,27 @@
     }, { onConflict: 'id' });
   }
 
-  async function handleLogout() {
+  window.handleLogout = async function() {
     await supabase.auth.signOut();
     window.location.reload();
-  }
+  };
 
   function handleUserSession(user) {
     currentUser = user;
-    document.getElementById('authContainer').classList.add('hidden');
-    document.getElementById('portalContainer').classList.remove('hidden');
-    document.getElementById('logoutBtn').classList.remove('hidden');
-    document.getElementById('userEmailDisplay').innerText = maskEmail(user.email);
+    const authCard = document.querySelector('.card') || document.getElementById('authContainer');
+    const portalContainer = document.getElementById('portalContainer') || document.querySelector('.container');
+    const userEmailDisplay = document.getElementById('userEmailDisplay');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (authCard && authCard.parentElement && authCard.parentElement.classList.contains('auth-wrapper')) {
+      authCard.parentElement.style.display = 'none';
+    } else if (authCard) {
+      authCard.style.display = 'none';
+    }
+
+    if (portalContainer) portalContainer.style.display = 'block';
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+    if (userEmailDisplay) userEmailDisplay.innerText = maskEmail(user.email);
 
     fetchUserBooking();
     fetchChatMessages();
@@ -530,17 +569,24 @@
 
   function showAuthUI() {
     currentUser = null;
-    document.getElementById('authContainer').classList.remove('hidden');
-    document.getElementById('portalContainer').classList.add('hidden');
-    document.getElementById('logoutBtn').classList.add('hidden');
-    document.getElementById('userEmailDisplay').innerText = '';
+    const authCard = document.querySelector('.card') || document.getElementById('authContainer');
+    const portalContainer = document.getElementById('portalContainer') || document.querySelector('.container');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    if (authCard && authCard.parentElement && authCard.parentElement.classList.contains('auth-wrapper')) {
+      authCard.parentElement.style.display = 'block';
+    } else if (authCard) {
+      authCard.style.display = 'block';
+    }
+
+    if (portalContainer) portalContainer.style.display = 'none';
+    if (logoutBtn) logoutBtn.classList.add('hidden');
   }
 
-  // --- BOOKING PIPELINE & STRICT USER ISOLATION ---
+  // --- BOOKING PIPELINE & STRICT ISOLATION ---
   async function fetchUserBooking() {
     if (!currentUser) return;
 
-    // Filter ONLY tickets belonging to the logged-in user
     const { data: tickets, error } = await supabase
       .from('tickets')
       .select('*')
@@ -555,34 +601,46 @@
     const active = tickets ? tickets.find(t => t.status !== 'closed') : null;
     activeTicket = active;
 
+    const newBookingSec = document.getElementById('newBookingSection');
+    const ticketDetailsSec = document.getElementById('ticketDetails');
+    const discordWidget = document.getElementById('discordWidget');
+
     if (active) {
-      document.getElementById('newBookingSection').classList.add('hidden');
-      document.getElementById('ticketDetails').classList.remove('hidden');
+      if (newBookingSec) newBookingSec.classList.add('hidden');
+      if (ticketDetailsSec) ticketDetailsSec.classList.remove('hidden');
 
-      document.getElementById('ticketId').innerText = `#${active.id.slice(0, 8)}`;
-      document.getElementById('bookingDate').innerText = formatLocalDate(active.created_at);
-      document.getElementById('slotTime').innerText = active.offered_slot ? formatLocalDate(active.offered_slot) : 'Awaiting Slot Offer';
-      document.getElementById('ticketNotesText').innerText = active.notes || 'No notes attached.';
+      const elId = document.getElementById('ticketId');
+      const elDate = document.getElementById('bookingDate');
+      const elSlot = document.getElementById('slotTime');
+      const elNotes = document.getElementById('ticketNotesText');
+      const elBadge = document.getElementById('ticketStatusBadge');
 
-      document.getElementById('ticketStatusBadge').innerText = active.status.replace('_', ' ');
+      if (elId) elId.innerText = `#${active.id.slice(0, 8)}`;
+      if (elDate) elDate.innerText = formatLocalDate(active.created_at);
+      if (elSlot) elSlot.innerText = active.offered_slot ? formatLocalDate(active.offered_slot) : 'Awaiting Slot Offer';
+      if (elNotes) elNotes.innerText = active.notes || 'No notes attached.';
+      if (elBadge) elBadge.innerText = active.status.replace('_', ' ');
 
-      if (active.admin_comment) {
-        document.getElementById('adminCommentBox').classList.remove('hidden');
-        document.getElementById('adminCommentText').innerText = active.admin_comment;
-      } else {
-        document.getElementById('adminCommentBox').classList.add('hidden');
+      const commentBox = document.getElementById('adminCommentBox');
+      const commentText = document.getElementById('adminCommentText');
+      if (active.admin_comment && commentBox && commentText) {
+        commentBox.classList.remove('hidden');
+        commentText.innerText = active.admin_comment;
+      } else if (commentBox) {
+        commentBox.classList.add('hidden');
       }
 
       updatePipelineUI(active.status);
 
-      if (active.status === 'slot_offered') {
-        document.getElementById('slotActionControls').classList.remove('hidden');
-      } else {
-        document.getElementById('slotActionControls').classList.add('hidden');
+      const slotControls = document.getElementById('slotActionControls');
+      if (slotControls) {
+        if (active.status === 'slot_offered') {
+          slotControls.classList.remove('hidden');
+        } else {
+          slotControls.classList.add('hidden');
+        }
       }
 
-      // SHOW DISCORD WIDGET WHEN SLOT IS ACCEPTED OR CONFIRMED
-      const discordWidget = document.getElementById('discordWidget');
       if (discordWidget) {
         if (active.status === 'accepted' || active.status === 'confirmed') {
           discordWidget.classList.remove('hidden');
@@ -594,11 +652,12 @@
       }
 
     } else {
-      document.getElementById('newBookingSection').classList.remove('hidden');
-      document.getElementById('ticketDetails').classList.add('hidden');
-      const discordWidget = document.getElementById('discordWidget');
+      if (newBookingSec) newBookingSec.classList.remove('hidden');
+      if (ticketDetailsSec) ticketDetailsSec.classList.add('hidden');
       if (discordWidget) discordWidget.classList.add('hidden');
-      document.getElementById('ticketStatusBadge').innerText = 'No Active Ticket';
+      
+      const elBadge = document.getElementById('ticketStatusBadge');
+      if (elBadge) elBadge.innerText = 'No Active Ticket';
       resetPipelineUI();
     }
   }
@@ -626,7 +685,7 @@
       if (s2) s2.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
       if (s3) s3.className = 'p-3.5 rounded-xl border pipeline-step-active transition-all flex flex-col items-center justify-center space-y-1';
     } else if (status === 'confirmed') {
-      ['step1', 'step2', 'step3', 'step4'].forEach(s => {
+      steps.forEach(s => {
         const el = document.getElementById(s);
         if (el) el.className = 'p-3.5 rounded-xl border pipeline-step-complete transition-all flex flex-col items-center justify-center space-y-1';
       });
@@ -641,11 +700,12 @@
     });
   }
 
-  async function submitBookingRequest(e) {
-    e.preventDefault();
+  window.submitBookingRequest = async function(e) {
+    if (e) e.preventDefault();
     if (!currentUser) return;
 
-    const notes = document.getElementById('bookingNotes').value;
+    const notesInput = document.getElementById('bookingNotes');
+    const notes = notesInput ? notesInput.value : '';
 
     const { error } = await supabase.from('tickets').insert([{
       user_id: currentUser.id,
@@ -657,12 +717,12 @@
     if (error) {
       alert("Failed to submit ticket request: " + error.message);
     } else {
-      document.getElementById('bookingNotes').value = '';
+      if (notesInput) notesInput.value = '';
       fetchUserBooking();
     }
-  }
+  };
 
-  async function acceptOfferedSlot() {
+  window.acceptOfferedSlot = async function() {
     if (!activeTicket) return;
 
     const { error } = await supabase
@@ -676,9 +736,9 @@
     } else {
       fetchUserBooking();
     }
-  }
+  };
 
-  // --- SUPPORT CHAT IMPLEMENTATION ---
+  // --- SUPPORT CHAT ---
   async function fetchChatMessages() {
     if (!currentUser) return;
 
@@ -715,8 +775,8 @@
     container.scrollTop = container.scrollHeight;
   }
 
-  async function sendChatMessage(e) {
-    e.preventDefault();
+  window.sendChatMessage = async function(e) {
+    if (e) e.preventDefault();
     const input = document.getElementById('chatInput');
     if (!input) return;
     const text = input.value.trim();
@@ -734,7 +794,7 @@
       input.value = '';
       fetchChatMessages();
     }
-  }
+  };
 
   function subscribeRealtimeChat() {
     supabase
