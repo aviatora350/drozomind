@@ -2,414 +2,419 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Drozo Therapy - Admin Control Panel</title>
-  
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Ticket & Session Control</title>
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
   <style>
     :root {
-      --bg-black: #030303;
-      --card-bg: rgba(18, 18, 20, 0.85);
-      --card-border: rgba(39, 39, 42, 0.8);
-      --accent-lime: #a3e635;
-      --accent-lime-hover: #84cc16;
-      --text-primary: #f4f4f5;
-      --text-muted: #a1a1aa;
+      --bg-color: #f4f6f9;
+      --card-bg: #ffffff;
+      --primary: #3498db;
+      --success: #2ecc71;
+      --warning: #f39c12;
+      --danger: #e74c3c;
+      --neutral: #7f8c8d;
+      --text-dark: #2c3e50;
+      --text-muted: #6c757d;
+      --border-color: #e9ecef;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-    body { background: var(--bg-black); color: var(--text-primary); min-height: 100vh; padding-bottom: 40px; }
-
-    .main-container { padding: 16px; max-width: 900px; margin: 0 auto; width: 100%; }
-
-    #toastContainer { position: fixed; top: 15px; right: 15px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
-    .toast { background: #121212; border: 1px solid var(--card-border); color: #fff; padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateY(-10px); transition: 0.3s ease; font-size: 0.85rem; }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
-    .toast-error { border-color: #ef4444; color: #fca5a5; }
-
-    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-
-    label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
-    input, select, textarea { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 14px; color: #fff; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-color); color: var(--text-dark); padding: 24px; }
     
-    .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; }
-    .btn-lime { background: var(--accent-lime); color: #000; }
-    .btn-lime:hover { background: var(--accent-lime-hover); }
-    .btn-danger { background: #ef4444; color: white; }
-    .btn-secondary { background: #27272a; color: white; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--border-color); }
+    h1 { font-size: 26px; color: var(--text-dark); }
+    
+    /* Stats Bar */
+    .stats-bar { display: flex; gap: 16px; margin-bottom: 24px; }
+    .stat-card { flex: 1; background: var(--card-bg); padding: 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); text-align: center; }
+    .stat-number { font-size: 22px; font-weight: bold; margin-top: 4px; }
 
-    .turnstile-wrapper { margin-bottom: 16px; display: flex; justify-content: center; }
+    /* Filters */
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; }
+    .filter-btn { padding: 8px 16px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-muted); transition: all 0.2s; }
+    .filter-btn.active, .filter-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
 
-    .ticket-card { background: #09090b; border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
-    .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(163, 230, 53, 0.15); color: var(--accent-lime); }
+    /* Ticket Cards */
+    .ticket-list { display: flex; flex-direction: column; gap: 20px; }
+    .ticket-card { background: var(--card-bg); border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--primary); position: relative; }
+    
+    /* Status Colors */
+    .ticket-card.pending { border-left-color: var(--warning); }
+    .ticket-card.accepted { border-left-color: var(--success); }
+    .ticket-card.offered { border-left-color: var(--primary); }
+    .ticket-card.cancelled { border-left-color: var(--danger); }
+    .ticket-card.closed { border-left-color: var(--neutral); }
 
-    .chat-box { height: 250px; border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
-    .chat-msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 0.85rem; }
-    .chat-msg.admin { background: var(--accent-lime); color: #000; font-weight: 600; align-self: flex-end; }
-    .chat-msg.user { background: #18181b; border: 1px solid var(--card-border); color: #fff; align-self: flex-start; }
+    .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .ticket-title { font-size: 18px; font-weight: bold; }
 
-    .hidden { display: none !important; }
+    /* Badges */
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #fff; text-transform: uppercase; }
+    .badge.pending { background: var(--warning); }
+    .badge.accepted { background: var(--success); }
+    .badge.offered { background: var(--primary); }
+    .badge.cancelled { background: var(--danger); }
+    .badge.closed { background: var(--neutral); }
+
+    /* Details Grid */
+    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 14px; }
+    .details-item span { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
+    
+    /* Inline Action Box */
+    .action-box { background: #fafbfc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-top: 12px; }
+    .action-box h4 { font-size: 14px; margin-bottom: 12px; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .action-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .action-row:last-child { margin-bottom: 0; }
+    
+    label { font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; color: var(--text-muted); }
+    input[type="datetime-local"], input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none; }
+    input:focus { border-color: var(--primary); }
+
+    /* Buttons */
+    .btn { padding: 9px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; color: #fff; white-space: nowrap; }
+    .btn:hover { opacity: 0.88; }
+    .btn-accept { background-color: var(--success); }
+    .btn-offer { background-color: var(--primary); }
+    .btn-cancel { background-color: var(--danger); }
+    .btn-close { background-color: var(--neutral); }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 16px; }
   </style>
 </head>
 <body>
 
-  <div id="toastContainer"></div>
+<div class="container">
+  <header>
+    <h1>Admin Booking & Session Control</h1>
+    <span id="connection-status" style="font-size: 12px; color: var(--success); font-weight: bold;">● Realtime Connected</span>
+  </header>
 
-  <!-- ADMIN LOGIN PAGE -->
-  <div id="adminAuthPage" class="main-container">
-    <div class="card" style="margin-top: 50px; text-align: center;">
-      <h2 style="color: var(--accent-lime); margin-bottom: 10px; display: flex; justify-content: center; align-items: center; gap: 8px;">
-        <i data-lucide="shield"></i> Admin Portal
-      </h2>
-      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">Sign in with administrator credentials.</p>
-
-      <form onsubmit="handleAdminLogin(event)">
-        <label style="text-align: left;">Email</label>
-        <input type="email" id="adminEmail" required>
-
-        <label style="text-align: left;">Password</label>
-        <input type="password" id="adminPassword" required>
-
-        <div class="turnstile-wrapper">
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess" data-theme="dark"></div>
-        </div>
-
-        <button type="submit" class="btn btn-lime" style="width: 100%;"><i data-lucide="key"></i> Login to Admin Panel</button>
-      </form>
+  <!-- Quick Overview Stats -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div style="color: var(--text-muted); font-size: 12px;">TOTAL TICKETS</div>
+      <div class="stat-number" id="stat-total">0</div>
+    </div>
+    <div class="stat-card">
+      <div style="color: var(--warning); font-size: 12px;">PENDING</div>
+      <div class="stat-number" id="stat-pending">0</div>
+    </div>
+    <div class="stat-card">
+      <div style="color: var(--success); font-size: 12px;">CONFIRMED/ACTIVE</div>
+      <div class="stat-number" id="stat-active">0</div>
+    </div>
+    <div class="stat-card">
+      <div style="color: var(--neutral); font-size: 12px;">CLOSED</div>
+      <div class="stat-number" id="stat-closed">0</div>
     </div>
   </div>
 
-  <!-- ADMIN DASHBOARD -->
-  <div id="adminDashboard" class="main-container hidden">
+  <!-- Status Filter Bar -->
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All Tickets</button>
+    <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
+    <button class="filter-btn" onclick="setFilter('accepted', this)">Accepted</button>
+    <button class="filter-btn" onclick="setFilter('offered', this)">Slot Offered</button>
+    <button class="filter-btn" onclick="setFilter('closed', this)">Closed</button>
+  </div>
+
+  <!-- Ticket List Container -->
+  <div id="tickets-list" class="ticket-list">
+    <div class="empty-state">Loading booking requests...</div>
+  </div>
+</div>
+
+<script>
+  // ========================================================
+  // 1. CONFIGURATION & SUPABASE INITIALIZATION
+  // ========================================================
+  const SUPABASE_URL = "YOUR_SUPABASE_URL";
+  const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let currentFilter = 'all';
+  let allTickets = [];
+
+  // ========================================================
+  // 2. FETCH AND RENDER TICKETS
+  // ========================================================
+  async function loadTickets() {
+    const { data: tickets, error } = await supabase
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">Error loading tickets: ${error.message}</div>`;
+      return;
+    }
+
+    allTickets = tickets || [];
+    updateStats();
+    renderTickets();
+  }
+
+  function updateStats() {
+    document.getElementById('stat-total').innerText = allTickets.length;
+    document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('pending')).length;
+    document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted').length;
+    document.getElementById('stat-closed').innerText = allTickets.filter(t => t.status === 'Closed').length;
+  }
+
+  function setFilter(filter, element) {
+    currentFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    element.classList.add('active');
+    renderTickets();
+  }
+
+  function renderTickets() {
+    const container = document.getElementById('tickets-list');
+    container.innerHTML = '';
+
+    const filtered = allTickets.filter(t => {
+      const status = (t.status || '').toLowerCase();
+      if (currentFilter === 'all') return true;
+      if (currentFilter === 'pending') return status.includes('pending');
+      if (currentFilter === 'accepted') return status === 'accepted';
+      if (currentFilter === 'offered') return status.includes('offered') || status.includes('slot');
+      if (currentFilter === 'closed') return status === 'closed' || status === 'cancelled';
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div class="empty-state">No tickets found matching "${currentFilter}".</div>`;
+      return;
+    }
+
+    filtered.forEach(ticket => {
+      const statusKey = getStatusKey(ticket.status);
+      const card = document.createElement('div');
+      card.className = `ticket-card ${statusKey}`;
+
+      card.innerHTML = `
+        <div class="ticket-header">
+          <div class="ticket-title">Ticket #${ticket.ticket_number}</div>
+          <span class="badge ${statusKey}">${ticket.status || 'Pending'}</span>
+        </div>
+
+        <div class="details-grid">
+          <div class="details-item">
+            <span>User ID</span>
+            ${ticket.user_id}
+          </div>
+          <div class="details-item">
+            <span>User Preferred Time</span>
+            <strong>${ticket.pref_time || 'N/A'}</strong>
+          </div>
+          <div class="details-item">
+            <span>Offered Time</span>
+            <strong>${ticket.offered_time || 'None'}</strong>
+          </div>
+          <div class="details-item">
+            <span>Confirmed Session Time</span>
+            <strong style="color: var(--success);">${ticket.accepted_time || 'Not Confirmed'}</strong>
+          </div>
+          <div class="details-item">
+            <span>User Notes</span>
+            ${ticket.notes || 'None'}
+          </div>
+          <div class="details-item">
+            <span>Admin Comment / Reason</span>
+            ${ticket.admin_comment || 'None'}
+          </div>
+        </div>
+
+        <!-- INLINE ACTION CONTROLS -->
+        <div class="action-box">
+          <h4>Manage Session & Time Slots</h4>
+
+          <!-- Option 1: Accept Preferred or Current Slot -->
+          <div class="action-row">
+            <div>
+              <label>Accept Preferred/Offered Slot Directly:</label>
+              <span style="font-size: 13px; color: var(--text-dark);">
+                Current Slot: <strong>${ticket.pref_time || ticket.offered_time || 'None'}</strong>
+              </span>
+            </div>
+            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">
+              Accept Slot
+            </button>
+          </div>
+
+          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+
+          <!-- Option 2: Offer Custom Time Slot -->
+          <div class="action-row">
+            <div>
+              <label for="slot-input-${ticket.id}">Offer Alternative Slot:</label>
+              <input type="datetime-local" id="slot-input-${ticket.id}">
+            </div>
+            <button class="btn btn-offer" style="margin-top: 18px;" onclick="offerNewSlot('${ticket.id}')">
+              Send Slot Offer
+            </button>
+          </div>
+
+          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+
+          <!-- Option 3: Cancel Booking with Reason -->
+          <div class="action-row">
+            <div>
+              <label for="cancel-reason-${ticket.id}">Cancel Booking Reason:</label>
+              <input type="text" id="cancel-reason-${ticket.id}" placeholder="e.g., Slot unavailable / Requested time outside working hours">
+            </div>
+            <button class="btn btn-cancel" style="margin-top: 18px;" onclick="cancelBooking('${ticket.id}')">
+              Cancel Booking
+            </button>
+          </div>
+
+          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+
+          <!-- Option 4: Close Completed Session -->
+          <div class="action-row">
+            <div>
+              <label for="close-reason-${ticket.id}">Close Session Notes:</label>
+              <input type="text" id="close-reason-${ticket.id}" placeholder="e.g., Session completed successfully">
+            </div>
+            <button class="btn btn-close" style="margin-top: 18px;" onclick="closeSession('${ticket.id}')">
+              Close Session
+            </button>
+          </div>
+        </div>
+      `;
+
+      container.appendChild(card);
+    });
+  }
+
+  function getStatusKey(status) {
+    if (!status) return 'pending';
+    const s = status.toLowerCase();
+    if (s.includes('accept')) return 'accepted';
+    if (s.includes('offered') || s.includes('slot')) return 'offered';
+    if (s.includes('cancel')) return 'cancelled';
+    if (s.includes('close')) return 'closed';
+    return 'pending';
+  }
+
+  // ========================================================
+  // 3. ACTION HANDLERS
+  // ========================================================
+
+  // 1. Accept Slot
+  async function acceptTicket(ticketId, chosenTime) {
+    if (!chosenTime) {
+      alert("No valid preferred or offered time exists to accept. Please offer a custom slot first.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        status: 'Accepted',
+        accepted_time: chosenTime
+      })
+      .eq('id', ticketId);
+
+    if (error) alert('Error updating ticket: ' + error.message);
+    else loadTickets();
+  }
+
+  // 2. Offer New Slot
+  async function offerNewSlot(ticketId) {
+    const input = document.getElementById(`slot-input-${ticketId}`);
+    if (!input || !input.value) {
+      alert('Please select a date and time before sending an offer.');
+      return;
+    }
+
+    const formattedTime = new Date(input.value).toLocaleString([], {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        status: 'Slot Offered',
+        offered_time: formattedTime
+      })
+      .eq('id', ticketId);
+
+    if (error) alert('Error sending slot offer: ' + error.message);
+    else loadTickets();
+  }
+
+  // 3. Cancel Booking with Reason
+  async function cancelBooking(ticketId) {
+    const input = document.getElementById(`cancel-reason-${ticketId}`);
+    const reason = input ? input.value.trim() : '';
     
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <div>
-        <h2 style="color: var(--accent-lime); display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> Admin Dashboard</h2>
-        <p style="color: var(--text-muted); font-size: 0.8rem;" id="adminEmailVal">admin@domain.com</p>
-      </div>
-      <div style="display: flex; gap: 8px;">
-        <a href="index.html" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Client View</a>
-        <button onclick="handleSignOut()" class="btn btn-danger"><i data-lucide="log-out"></i> Sign Out</button>
-      </div>
-    </div>
-
-    <!-- TICKET MANAGEMENT -->
-    <div class="card">
-      <div class="card-title"><i data-lucide="list"></i> Client Session Requests (Live)</div>
-      <div id="adminTicketList">
-        <p style="color: var(--text-muted);">Loading tickets...</p>
-      </div>
-    </div>
-
-    <!-- REAL-TIME LIVE CHAT CONSOLE -->
-    <div class="card">
-      <div class="card-title"><i data-lucide="message-square"></i> Live Client Support Console</div>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Select a user from the dropdown to chat with them live.</p>
-
-      <label>Select Client Conversation</label>
-      <select id="chatUserSelect" onchange="loadAdminSelectedChat()">
-        <option value="">-- Select a Client --</option>
-      </select>
-
-      <div class="chat-box" id="adminChatContainer">
-        <p style="color: var(--text-muted); text-align: center; margin: auto;">Select a client above to open conversation.</p>
-      </div>
-
-      <form onsubmit="sendAdminMessage(event)" style="display: flex; gap: 8px;">
-        <input type="text" id="adminChatMessageInput" placeholder="Type admin reply..." style="margin-bottom: 0;" required>
-        <button type="submit" class="btn btn-lime" style="white-space: nowrap;"><i data-lucide="send"></i> Reply</button>
-      </form>
-    </div>
-
-    <!-- ADD/PROMOTE ADMIN PANEL -->
-    <div class="card">
-      <div class="card-title"><i data-lucide="user-plus"></i> Promote User to Admin</div>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
-        Enter an existing user's registered email address to grant them administrative access.
-      </p>
-      
-      <form onsubmit="promoteUserToAdmin(event)" style="display: flex; gap: 10px;">
-        <input type="email" id="promoteEmailInput" placeholder="user@gmail.com" style="margin-bottom: 0;" required>
-        <button type="submit" class="btn btn-lime" style="white-space: nowrap;"><i data-lucide="shield-check"></i> Make Admin</button>
-      </form>
-    </div>
-
-  </div>
-
-  <script>
-    const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    let currentAdminUser = null;
-    let turnstileToken = null;
-    let activeChatUserId = null;
-
-    window.onTurnstileSuccess = function(token) {
-      turnstileToken = token;
-    };
-
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.innerHTML = `<span>${message}</span>`;
-      container.appendChild(toast);
-      setTimeout(() => toast.classList.add('show'), 10);
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-      }, 4000);
+    if (!reason) {
+      alert('Please enter a cancellation reason.');
+      return;
     }
 
-    async function initAdmin() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        document.getElementById('adminAuthPage').classList.remove('hidden');
-        document.getElementById('adminDashboard').classList.add('hidden');
-        return;
-      }
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        status: 'Cancelled',
+        admin_comment: reason
+      })
+      .eq('id', ticketId);
 
-      const { data: profile } = await supabaseClient
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single();
+    if (error) alert('Error cancelling ticket: ' + error.message);
+    else loadTickets();
+  }
 
-      if (!profile || profile.role !== 'admin') {
-        showToast("Access Denied: You do not have admin permissions.", "error");
-        await supabaseClient.auth.signOut();
-        return;
-      }
+  // 4. Close Session
+  async function closeSession(ticketId) {
+    const input = document.getElementById(`close-reason-${ticketId}`);
+    const reason = input ? input.value.trim() : '';
 
-      currentAdminUser = session.user;
-      document.getElementById('adminAuthPage').classList.add('hidden');
-      document.getElementById('adminDashboard').classList.remove('hidden');
-      document.getElementById('adminEmailVal').innerText = currentAdminUser.email;
-
-      fetchAdminTickets();
-      populateChatUserDropdown();
-      setupAdminRealtime();
-      lucide.createIcons();
+    if (!reason) {
+      alert('Please provide session completion notes or a reason before closing.');
+      return;
     }
 
-    async function handleAdminLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('adminEmail').value.trim();
-      const password = document.getElementById('adminPassword').value;
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        status: 'Closed',
+        admin_comment: reason
+      })
+      .eq('id', ticketId);
 
-      if (!turnstileToken) {
-        showToast("Please complete the CAPTCHA verification.", "error");
-        return;
-      }
+    if (error) alert('Error closing session: ' + error.message);
+    else loadTickets();
+  }
 
-      const activeToken = turnstileToken;
-      turnstileToken = null;
-
-      const { data, error } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password,
-        options: { captchaToken: activeToken }
-      });
-
-      if (error) {
-        showToast(error.message, "error");
-        if (window.turnstile) turnstile.reset();
+  // ========================================================
+  // 4. REALTIME SUBSCRIPTION
+  // ========================================================
+  supabase
+    .channel('public:tickets')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+      loadTickets();
+    })
+    .subscribe((status) => {
+      const statusEl = document.getElementById('connection-status');
+      if (status === 'SUBSCRIBED') {
+        statusEl.innerText = '● Realtime Active';
+        statusEl.style.color = 'var(--success)';
       } else {
-        initAdmin();
+        statusEl.innerText = '○ Connecting...';
+        statusEl.style.color = 'var(--warning)';
       }
-    }
+    });
 
-    async function fetchAdminTickets() {
-      const { data: tickets, error } = await supabaseClient
-        .from('tickets')
-        .select('*, profiles(email)')
-        .order('created_at', { ascending: false });
-
-      const container = document.getElementById('adminTicketList');
-      if (error || !tickets || tickets.length === 0) {
-        container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">No ticket records found.</p>`;
-        return;
-      }
-
-      container.innerHTML = tickets.map(t => `
-        <div class="ticket-card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <strong>${t.ticket_number}</strong>
-            <span class="badge">${t.status}</span>
-          </div>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">User: ${t.profiles?.email || t.user_id}</p>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">Current Slot: ${t.pref_time ? new Date(t.pref_time).toLocaleString() : 'N/A'}</p>
-          ${t.notes ? `<p style="font-size: 0.8rem; margin-top: 4px; color: #ccc;">Notes: ${t.notes}</p>` : ''}
-          
-          <hr style="border-color: var(--card-border); margin: 12px 0;">
-
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <label style="margin-bottom:0;">Offer / Change Time Slot:</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="datetime-local" id="slot_${t.id}" style="margin-bottom:0; flex:1;">
-              <button onclick="offerTimeSlot('${t.id}')" class="btn btn-lime">Offer Slot</button>
-            </div>
-            
-            <div style="display: flex; gap: 8px; margin-top: 6px;">
-              <button onclick="updateStatus('${t.id}', 'Confirmed')" class="btn btn-secondary"><i data-lucide="check-circle"></i> Mark Confirmed</button>
-              <button onclick="updateStatus('${t.id}', 'Closed')" class="btn btn-danger"><i data-lucide="x-circle"></i> Close Ticket</button>
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      lucide.createIcons();
-    }
-
-    async function offerTimeSlot(ticketId) {
-      const input = document.getElementById(`slot_${ticketId}`);
-      if (!input.value) {
-        showToast("Please select a date and time to offer.", "error");
-        return;
-      }
-
-      const { error } = await supabaseClient
-        .from('tickets')
-        .update({ 
-          pref_time: new Date(input.value).toISOString(),
-          status: 'Time Slot Offered'
-        })
-        .eq('id', ticketId);
-
-      if (error) showToast(error.message, "error");
-      else {
-        showToast("Time slot offered to client!");
-        fetchAdminTickets();
-      }
-    }
-
-    async function updateStatus(ticketId, newStatus) {
-      const { error } = await supabaseClient
-        .from('tickets')
-        .update({ status: newStatus })
-        .eq('id', ticketId);
-
-      if (error) showToast(error.message, "error");
-      else {
-        showToast(`Ticket status updated to ${newStatus}`);
-        fetchAdminTickets();
-      }
-    }
-
-    async function populateChatUserDropdown() {
-      const { data: profiles } = await supabaseClient
-        .from('profiles')
-        .select('id, email')
-        .neq('role', 'admin');
-
-      const select = document.getElementById('chatUserSelect');
-      select.innerHTML = '<option value="">-- Select a Client --</option>';
-      if (profiles) {
-        profiles.forEach(p => {
-          select.innerHTML += `<option value="${p.id}">${p.email}</option>`;
-        });
-      }
-    }
-
-    async function loadAdminSelectedChat() {
-      activeChatUserId = document.getElementById('chatUserSelect').value;
-      if (!activeChatUserId) return;
-
-      const { data: messages } = await supabaseClient
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', activeChatUserId)
-        .order('created_at', { ascending: true });
-
-      const container = document.getElementById('adminChatContainer');
-      if (messages && messages.length > 0) {
-        container.innerHTML = messages.map(m => `
-          <div class="chat-msg ${m.sender_role === 'admin' ? 'admin' : 'user'}">
-            ${m.message}
-          </div>
-        `).join('');
-      } else {
-        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin: auto;">No messages yet with this client.</p>`;
-      }
-      container.scrollTop = container.scrollHeight;
-    }
-
-    async function sendAdminMessage(e) {
-      e.preventDefault();
-      if (!activeChatUserId) {
-        showToast("Please select a client to chat with first.", "error");
-        return;
-      }
-
-      const input = document.getElementById('adminChatMessageInput');
-      if (!input.value) return;
-
-      await supabaseClient.from('chat_messages').insert([{
-        user_id: activeChatUserId,
-        sender_role: 'admin',
-        message: input.value,
-        status: 'replied'
-      }]);
-
-      input.value = '';
-      loadAdminSelectedChat();
-    }
-
-    async function promoteUserToAdmin(e) {
-      e.preventDefault();
-      const email = document.getElementById('promoteEmailInput').value.trim();
-
-      const { error } = await supabaseClient
-        .from('profiles')
-        .update({ role: 'admin' })
-        .eq('email', email);
-
-      if (error) {
-        showToast(error.message, "error");
-      } else {
-        showToast(`Successfully granted admin privileges to ${email}!`);
-        document.getElementById('promoteEmailInput').value = '';
-      }
-    }
-
-    // REAL-TIME WEBSOCKET LISTENERS
-    function setupAdminRealtime() {
-      supabaseClient
-        .channel('admin-realtime-tickets')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
-          fetchAdminTickets();
-          showToast("New ticket or booking status change detected!", "success");
-        })
-        .subscribe();
-
-      supabaseClient
-        .channel('admin-realtime-chats')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
-          populateChatUserDropdown();
-          if (activeChatUserId) {
-            loadAdminSelectedChat();
-          }
-          showToast("New chat message received!", "success");
-        })
-        .subscribe();
-    }
-
-    async function handleSignOut() {
-      await supabaseClient.auth.signOut();
-      window.location.reload();
-    }
-
-    initAdmin();
-  </script>
+  // Initial Data Fetch
+  loadTickets();
+</script>
 </body>
 </html>
