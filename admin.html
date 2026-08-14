@@ -37,23 +37,21 @@
 
     #toastContainer {
       position: fixed; top: 15px; right: 15px; z-index: 99999;
-      display: flex; flex-direction: column; gap: 8px;
-      max-width: calc(100vw - 30px);
+      display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 30px);
     }
     .toast {
       background: #121212; border: 1px solid var(--card-border); color: #fff;
       padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transform: translateY(-10px);
-      transition: 0.3s ease; font-size: 0.85rem; font-weight: 500; word-break: break-word;
+      transition: 0.3s ease; font-size: 0.85rem; font-weight: 500;
     }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
     .toast-error { border-color: #ef4444; color: #fca5a5; }
 
-    /* DASHBOARD LAYOUT */
-    .dashboard-layout { display: flex; min-height: 100vh; width: 100vw; max-width: 100vw; z-index: 1; position: relative; overflow-x: hidden; }
+    /* LAYOUT STRUCTURE */
+    .dashboard-layout { display: flex; min-height: 100vh; width: 100vw; max-width: 100vw; z-index: 1; position: relative; }
     
-    /* DESKTOP SIDEBAR */
     .desktop-sidebar { width: 260px; background: #000000; color: white; padding: 25px 16px; border-right: 1px solid #18181b; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
     .sidebar-brand { font-size: 1.2rem; font-weight: 700; color: var(--accent-lime); margin-bottom: 30px; display: flex; align-items: center; gap: 8px; }
     
@@ -62,7 +60,6 @@
     .nav-item:hover, .nav-item.active { background: rgba(163, 230, 53, 0.1); color: var(--accent-lime); }
     .nav-item.portal-btn { background: #18181b; color: var(--text-primary); margin-top: 10px; font-weight: 600; border: 1px solid var(--card-border); }
 
-    /* MOBILE NAVIGATION BAR */
     .mobile-bottom-nav { display: none; }
 
     .main-content { flex: 1; padding: 30px; overflow-y: auto; background: var(--bg-black); display: flex; flex-direction: column; justify-content: space-between; min-width: 0; max-width: 100%; }
@@ -72,49 +69,39 @@
     .page.active-page { display: block; animation: fadeIn 0.25s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; margin-bottom: 18px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); word-wrap: break-word; overflow: hidden; }
+    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
     .card h3 { font-size: 1rem; color: var(--text-primary); margin-bottom: 14px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 
     label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
-    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; transition: 0.2s; color-scheme: dark; }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
+    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; color-scheme: dark; }
 
     .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85rem; min-height: 40px; }
     .btn-lime { background: var(--accent-lime); color: #000000; font-weight: 700; }
-    .btn-lime:hover { background: var(--accent-lime-hover); }
     .btn-danger { background: #ef4444; color: white; }
-    .btn-secondary { background: #27272a; color: var(--text-primary); border: 1px solid var(--card-border); }
 
-    /* RESPONSIVE TABLE WRAPPER */
     .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; min-width: 600px; }
     th, td { padding: 12px 14px; border-bottom: 1px solid var(--card-border); word-break: break-word; }
     th { background: #09090b; color: var(--text-muted); font-weight: 600; }
-    tr:hover { background: rgba(255,255,255,0.02); }
 
     .chat-box { height: 320px; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; overflow-y: auto; background: #000000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
     .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
-    .chat-msg.admin { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; border-bottom-right-radius: 2px; }
-    .chat-msg.user { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 2px; }
+    .chat-msg.admin { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; }
+    .chat-msg.user { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; }
 
     .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
     .badge-pending { background: #422006; color: #fef08a; border: 1px solid #854d0e; }
     .badge-success { background: #1a2e05; color: var(--accent-lime); border: 1px solid var(--accent-lime-dark); }
     .badge-closed { background: #2f0d0d; color: #fca5a5; border: 1px solid #991b1b; }
 
-    .footer { text-align: center; padding: 16px 0 10px 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 20px; }
+    .footer { text-align: center; padding: 16px 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 20px; }
     .hidden { display: none !important; }
 
-    /* ===================================================
-       MOBILE RESPONSIVE FIXES (Max Width: 768px)
-       =================================================== */
+    /* STRICT MOBILE OVERRIDES (Mobile Phones ≤ 768px) */
     @media (max-width: 768px) {
-      .dashboard-layout { flex-direction: column; width: 100vw; max-width: 100vw; overflow-x: hidden; }
-      
-      /* HIDE DESKTOP SIDEBAR ON MOBILE */
+      .dashboard-layout { flex-direction: column; width: 100vw; overflow-x: hidden; }
       .desktop-sidebar { display: none !important; }
 
-      /* SHOW FIXED BOTTOM NAVIGATION ON MOBILE */
       .mobile-bottom-nav {
         display: flex !important;
         position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
@@ -124,22 +111,14 @@
       }
       .mobile-bottom-nav .nav-item {
         flex-direction: column; align-items: center; justify-content: center;
-        font-size: 0.65rem; color: var(--text-muted); gap: 3px; flex: 1;
-        padding: 6px 0; border-radius: 0; text-align: center;
+        font-size: 0.65rem; color: var(--text-muted); gap: 3px; flex: 1; text-align: center;
       }
-      .mobile-bottom-nav .nav-item.active {
-        color: var(--accent-lime); background: transparent;
-      }
+      .mobile-bottom-nav .nav-item.active { color: var(--accent-lime); background: transparent; }
       .mobile-bottom-nav .nav-item i { width: 20px; height: 20px; }
 
-      .main-content { padding: 14px 12px 80px 12px !important; width: 100vw !important; max-width: 100vw !important; overflow-x: hidden !important; }
+      .main-content { padding: 14px 12px 80px 12px !important; width: 100vw !important; }
       .top-header { flex-direction: column; align-items: flex-start; padding: 12px; gap: 6px; }
-      
-      input, select, textarea { font-size: 16px !important; } /* Prevent iOS Auto-Zoom */
-      .card { padding: 14px; }
-      
-      .action-btn-group { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-      .action-btn-group .btn { width: 100%; }
+      input, select, textarea { font-size: 16px !important; } /* Stops iOS Auto-Zoom */
     }
   </style>
 </head>
@@ -148,15 +127,12 @@
   <div class="ambient-glow"></div>
   <div id="toastContainer"></div>
 
-  <!-- DASHBOARD SECTION -->
   <div id="dashboardSection" class="dashboard-layout">
     
     <!-- DESKTOP SIDEBAR -->
     <aside class="desktop-sidebar">
       <div>
-        <div class="sidebar-brand">
-          <i data-lucide="shield"></i> Admin Panel
-        </div>
+        <div class="sidebar-brand"><i data-lucide="shield"></i> Admin Panel</div>
         <ul class="nav-menu">
           <li class="nav-item active" onclick="navigateTo('pageAdminTickets', this)"><i data-lucide="ticket"></i> <span>Session Requests</span></li>
           <li class="nav-item" onclick="navigateTo('pageAdminSupport', this)"><i data-lucide="message-square"></i> <span>Support DMs</span></li>
@@ -180,18 +156,18 @@
     <main class="main-content">
       <div>
         <div class="top-header">
-          <h2 id="pageTitle" style="color: var(--accent-lime); font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
+          <h2 style="color: var(--accent-lime); font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
             <i data-lucide="shield"></i> Admin Dashboard
           </h2>
-          <div style="font-size: 0.8rem; word-break: break-all;">
+          <div style="font-size: 0.8rem;">
             Admin: <strong id="adminEmailDisplay" style="color: var(--accent-lime);"></strong>
           </div>
         </div>
 
-        <!-- PAGE 1: TICKETS MANAGEMENT -->
+        <!-- PAGE 1: TICKETS -->
         <div id="pageAdminTickets" class="page active-page">
           <div class="card">
-            <h3><i data-lucide="ticket"></i> Active Therapy Session Tickets</h3>
+            <h3><i data-lucide="ticket"></i> Session Tickets</h3>
             <div class="table-container">
               <table>
                 <thead>
@@ -218,7 +194,7 @@
             <div style="margin-bottom: 15px;">
               <label>Select User Thread:</label>
               <select id="userChatSelect" onchange="loadUserChatThread()">
-                <option value="">-- Choose a user conversation --</option>
+                <option value="">-- Choose conversation --</option>
               </select>
             </div>
 
@@ -226,26 +202,26 @@
               <div class="chat-box" id="adminChatContainer"></div>
               
               <form id="adminChatForm" onsubmit="sendAdminMessage(event)" style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <input type="text" id="adminChatMessageInput" placeholder="Type response as admin..." style="margin-bottom: 0;" required>
-                <button type="submit" class="btn btn-lime"><i data-lucide="send"></i> Reply</button>
+                <input type="text" id="adminChatMessageInput" placeholder="Type response..." style="margin-bottom: 0;" required>
+                <button type="submit" class="btn btn-lime"><i data-lucide="send"></i></button>
               </form>
 
-              <button onclick="closeSupportDM()" class="btn btn-danger" style="width: 100%;"><i data-lucide="lock"></i> Mark Support DM Resolved & Close</button>
+              <button onclick="closeSupportDM()" class="btn btn-danger" style="width: 100%;"><i data-lucide="lock"></i> Mark DM Resolved</button>
             </div>
           </div>
         </div>
 
-        <!-- PAGE 3: USER MANAGEMENT -->
+        <!-- PAGE 3: USERS & COOLDOWNS -->
         <div id="pageAdminUsers" class="page">
           <div class="card">
-            <h3><i data-lucide="users"></i> User Accounts & Cooldown Controls</h3>
+            <h3><i data-lucide="users"></i> User Accounts</h3>
             <div class="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th>Email</th>
+                    <th>User ID</th>
                     <th>Role</th>
-                    <th>Cooldown Active Until</th>
+                    <th>Cooldown Active</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
@@ -296,10 +272,9 @@
 
       currentAdmin = session.user;
       
-      // Verify Admin Role
       const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentAdmin.id).single();
       if (!profile || profile.role !== 'admin') {
-        alert("Unauthorized access. Admin privileges required.");
+        alert("Admin access required.");
         window.location.href = 'index.html';
         return;
       }
@@ -337,120 +312,67 @@
       window.location.href = 'index.html';
     }
 
-    /* ==================== TICKET MANAGEMENT ==================== */
     async function fetchTickets() {
-      const { data: tickets, error } = await supabaseClient.from('tickets').select('*').order('created_at', { ascending: false });
+      const { data: tickets } = await supabaseClient.from('tickets').select('*').order('created_at', { ascending: false });
       const tbody = document.getElementById('ticketsTableBody');
 
-      if (error || !tickets || tickets.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No therapy tickets found.</td></tr>`;
+      if (!tickets || tickets.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No tickets found.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = tickets.map(t => {
-        let statusBadge = `<span class="badge badge-pending">${t.status}</span>`;
-        if (t.status === 'Scheduled') statusBadge = `<span class="badge badge-success">Scheduled</span>`;
-        if (t.status === 'Closed') statusBadge = `<span class="badge badge-closed">Closed</span>`;
-
-        const prefTimeFormatted = t.pref_time ? new Date(t.pref_time).toLocaleString() : 'N/A';
-
-        return `
-          <tr>
-            <td><strong>${t.ticket_number}</strong></td>
-            <td style="font-size: 0.75rem;">${t.user_id}</td>
-            <td style="font-size: 0.8rem;">${prefTimeFormatted}</td>
-            <td>${statusBadge}</td>
-            <td>
-              <div class="action-btn-group">
-                ${t.status !== 'Closed' ? `
-                  <button onclick="offerTimeSlot('${t.id}')" class="btn btn-lime" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="clock"></i> Offer Slot</button>
-                  <button onclick="closeTicket('${t.id}')" class="btn btn-danger" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="x-circle"></i> Close</button>
-                ` : '<span style="font-size: 0.75rem; color: var(--text-muted);">Resolved</span>'}
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      tbody.innerHTML = tickets.map(t => `
+        <tr>
+          <td><strong>${t.ticket_number}</strong></td>
+          <td style="font-size: 0.75rem;">${t.user_id.substring(0, 8)}...</td>
+          <td style="font-size: 0.8rem;">${t.pref_time ? new Date(t.pref_time).toLocaleString() : 'N/A'}</td>
+          <td><span class="badge ${t.status === 'Scheduled' ? 'badge-success' : 'badge-pending'}">${t.status}</span></td>
+          <td>
+            <button onclick="offerTimeSlot('${t.id}')" class="btn btn-lime" style="padding: 4px 8px; font-size: 0.75rem;">Offer Slot</button>
+          </td>
+        </tr>
+      `).join('');
       lucide.createIcons();
     }
 
     async function offerTimeSlot(ticketId) {
-      const offeredTime = prompt("Enter offered Date & Time (YYYY-MM-DD HH:MM format):");
-      if (!offeredTime) return;
+      const time = prompt("Enter Date & Time (YYYY-MM-DD HH:MM):");
+      if (!time) return;
 
-      const isoTime = new Date(offeredTime).toISOString();
-      if (isNaN(Date.parse(isoTime))) return showToast("Invalid Date Format", "error");
-
-      const { error } = await supabaseClient.from('tickets').update({
-        offered_time: isoTime,
-        status: 'Time Slot Offered'
-      }).eq('id', ticketId);
-
-      if (error) showToast(error.message, 'error');
-      else {
-        showToast("Offered new time slot to client!");
-        fetchTickets();
-      }
+      await supabaseClient.from('tickets').update({ offered_time: new Date(time).toISOString(), status: 'Time Slot Offered' }).eq('id', ticketId);
+      showToast("Time slot offered!");
+      fetchTickets();
     }
 
-    async function closeTicket(ticketId) {
-      const reason = prompt("Reason for closing this ticket:");
-      if (!reason) return;
-
-      const { error } = await supabaseClient.from('tickets').update({
-        status: 'Closed',
-        admin_comment: reason
-      }).eq('id', ticketId);
-
-      if (error) showToast(error.message, 'error');
-      else {
-        showToast("Ticket closed successfully.");
-        fetchTickets();
-      }
-    }
-
-    /* ==================== SUPPORT DMS ==================== */
     async function fetchChatUsers() {
       const { data } = await supabaseClient.from('chat_messages').select('user_id');
       const select = document.getElementById('userChatSelect');
-      
       if (!data) return;
-      const uniqueUsers = [...new Set(data.map(item => item.user_id))];
+      const uniqueUsers = [...new Set(data.map(i => i.user_id))];
       
-      const currentSelected = select.value;
-      select.innerHTML = `<option value="">-- Choose a user thread (${uniqueUsers.length}) --</option>`;
-      
+      select.innerHTML = `<option value="">-- Choose conversation (${uniqueUsers.length}) --</option>`;
       uniqueUsers.forEach(uid => {
         const opt = document.createElement('option');
         opt.value = uid;
-        opt.textContent = `User ID: ${uid.substring(0, 13)}...`;
-        if (uid === currentSelected) opt.selected = true;
+        opt.textContent = `User: ${uid.substring(0, 10)}...`;
         select.appendChild(opt);
       });
     }
 
     async function loadUserChatThread() {
       selectedChatUserId = document.getElementById('userChatSelect').value;
-      const threadContainer = document.getElementById('chatThreadContainer');
+      const container = document.getElementById('chatThreadContainer');
+      if (!selectedChatUserId) { container.classList.add('hidden'); return; }
 
-      if (!selectedChatUserId) {
-        threadContainer.classList.add('hidden');
-        return;
-      }
-
-      threadContainer.classList.remove('hidden');
+      container.classList.remove('hidden');
       const { data: messages } = await supabaseClient.from('chat_messages').select('*').eq('user_id', selectedChatUserId).order('created_at', { ascending: true });
       const box = document.getElementById('adminChatContainer');
 
-      if (messages && messages.length > 0) {
-        box.innerHTML = messages.map(m => `
-          <div class="chat-msg ${m.sender_role}">
-            <strong>${m.sender_role === 'admin' ? 'You (Admin)' : 'User'}:</strong> ${m.message}
-          </div>
-        `).join('');
-      } else {
-        box.innerHTML = `<p style="color: var(--text-muted); text-align: center;">No messages yet.</p>`;
-      }
+      box.innerHTML = (messages || []).map(m => `
+        <div class="chat-msg ${m.sender_role}">
+          <strong>${m.sender_role === 'admin' ? 'You' : 'User'}:</strong> ${m.message}
+        </div>
+      `).join('');
       box.scrollTop = box.scrollHeight;
     }
 
@@ -459,64 +381,37 @@
       const input = document.getElementById('adminChatMessageInput');
       if (!selectedChatUserId || !input.value) return;
 
-      await supabaseClient.from('chat_messages').insert([{
-        user_id: selectedChatUserId,
-        sender_role: 'admin',
-        message: input.value,
-        status: 'accepted'
-      }]);
-
+      await supabaseClient.from('chat_messages').insert([{ user_id: selectedChatUserId, sender_role: 'admin', message: input.value, status: 'accepted' }]);
       input.value = '';
       loadUserChatThread();
     }
 
     async function closeSupportDM() {
       if (!selectedChatUserId) return;
-      await supabaseClient.from('chat_messages').update({ status: 'closed_by_admin' }).eq('user_id', selectedChatUserId);
-      await supabaseClient.from('chat_messages').insert([{
-        user_id: selectedChatUserId,
-        sender_role: 'admin',
-        message: "🔒 [Administrator resolved and closed this support thread]",
-        status: 'closed_by_admin'
-      }]);
-
-      showToast("Support thread marked as closed.");
+      await supabaseClient.from('chat_messages').insert([{ user_id: selectedChatUserId, sender_role: 'admin', message: "🔒 [Support DM Closed]", status: 'closed_by_admin' }]);
+      showToast("Closed support thread.");
       loadUserChatThread();
     }
 
-    /* ==================== USER MANAGEMENT ==================== */
     async function fetchUsers() {
       const { data: profiles } = await supabaseClient.from('profiles').select('*');
       const tbody = document.getElementById('usersTableBody');
+      if (!profiles) return;
 
-      if (!profiles || profiles.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No user profiles found.</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = profiles.map(u => {
-        const cdTime = u.cooldown_until ? new Date(u.cooldown_until).toLocaleString() : 'None';
-        const isCdActive = u.cooldown_until && new Date() < new Date(u.cooldown_until);
-
-        return `
-          <tr>
-            <td style="font-size: 0.8rem;">${u.id}</td>
-            <td><span class="badge ${u.role === 'admin' ? 'badge-success' : 'badge-pending'}">${u.role.toUpperCase()}</span></td>
-            <td style="font-size: 0.8rem; color: ${isCdActive ? '#ef4444' : 'var(--text-muted)'};">${cdTime}</td>
-            <td>
-              ${isCdActive ? `
-                <button onclick="clearCooldown('${u.id}')" class="btn btn-lime" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="check"></i> Clear Cooldown</button>
-              ` : '<span style="font-size: 0.75rem; color: var(--text-muted);">No Restrictions</span>'}
-            </td>
-          </tr>
-        `;
-      }).join('');
+      tbody.innerHTML = profiles.map(u => `
+        <tr>
+          <td style="font-size: 0.8rem;">${u.id.substring(0, 12)}...</td>
+          <td><span class="badge ${u.role === 'admin' ? 'badge-success' : 'badge-pending'}">${u.role.toUpperCase()}</span></td>
+          <td>${u.cooldown_until ? new Date(u.cooldown_until).toLocaleTimeString() : 'None'}</td>
+          <td><button onclick="clearCooldown('${u.id}')" class="btn btn-lime" style="padding: 4px 8px; font-size: 0.75rem;">Clear</button></td>
+        </tr>
+      `).join('');
       lucide.createIcons();
     }
 
-    async function clearCooldown(userId) {
-      await supabaseClient.from('profiles').update({ cooldown_until: null }).eq('id', userId);
-      showToast("Cleared cooldown for user!");
+    async function clearCooldown(id) {
+      await supabaseClient.from('profiles').update({ cooldown_until: null }).eq('id', id);
+      showToast("Cleared cooldown");
       fetchUsers();
     }
 
