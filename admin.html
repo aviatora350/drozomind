@@ -615,6 +615,7 @@
         const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         const userEmailDisplay = getUserEmail(uId);
 
+        // Dot displays strictly if the CLIENT/USER sent a message and it is UNREAD
         const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.sender_role === 'user' && m.status === 'unread');
 
         const item = document.createElement('div');
@@ -709,14 +710,12 @@
       sendBtn.disabled = true;
       input.value = '';
 
-      const isSelf = activeChatUserId === currentAdminId;
-      const msgStatus = isSelf ? 'read' : 'unread';
-
+      // Messages sent to yourself or sent by you as admin are instantly marked as read
       const { error } = await supabaseClient.from('chat_messages').insert([{
         user_id: activeChatUserId,
         sender_role: 'admin',
         message: msg,
-        status: msgStatus
+        status: 'read'
       }]);
 
       if (error) {
