@@ -31,7 +31,7 @@
     .logo-title { font-size: 22px; font-weight: 700; color: var(--primary); }
     .btn-portal { background: transparent; color: var(--text-main); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer; }
 
-    .tab-nav { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; }
+    .tab-nav { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; flex-wrap: wrap; }
     .tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--card-border); padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
     .tab-btn.active, .tab-btn:hover { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
 
@@ -42,17 +42,20 @@
     .view-panel { display: none; }
     .view-panel.active { display: block; }
 
-    .ticket-list { display: flex; flex-direction: column; gap: 18px; }
-    .ticket-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 6px solid var(--primary); border-radius: 12px; padding: 20px; }
+    .ticket-list, .user-list { display: flex; flex-direction: column; gap: 18px; }
+    .ticket-card, .user-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 6px solid var(--primary); border-radius: 12px; padding: 20px; }
     .ticket-card.cancelled, .ticket-card.closed { border-left-color: var(--danger); }
+    .user-card.is-admin { border-left-color: var(--primary); }
+    .user-card.is-client { border-left-color: var(--neutral); }
 
-    .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .ticket-header, .user-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .header-actions { display: flex; align-items: center; gap: 10px; }
     
     .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
-    .status-badge.accepted { background: var(--primary); }
-    .status-badge.offered { background: var(--warning); }
+    .status-badge.accepted, .status-badge.admin-role { background: var(--primary); color: var(--primary-text); }
+    .status-badge.offered { background: var(--warning); color: #000; }
     .status-badge.cancelled, .status-badge.closed { background: var(--danger); color: #fff; }
+    .status-badge.user-role { background: var(--input-border); color: var(--text-muted); }
 
     .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: var(--input-bg); border: 1px solid var(--card-border); padding: 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
     .details-grid span { display: block; font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
@@ -68,6 +71,9 @@
     .btn-cancel { background-color: var(--danger); color: #fff; }
     .btn-delete { background-color: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-size: 12px; border-radius: 6px; }
     .btn-delete:hover { background-color: var(--danger); color: #fff; }
+    .btn-promote { background-color: var(--primary); color: var(--primary-text); padding: 8px 16px; font-size: 12px; }
+    .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
+    .btn-demote:hover { background-color: var(--warning); color: #000; }
 
     .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
     .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
@@ -101,9 +107,11 @@
 
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('tickets', this)">🎟️ Bookings & Sessions</button>
+    <button class="tab-btn" onclick="switchTab('accounts', this)">👥 User Accounts</button>
     <button class="tab-btn" onclick="switchTab('dms', this)">💬 Direct Messages</button>
   </div>
 
+  <!-- BOOKINGS PANEL -->
   <div id="view-tickets" class="view-panel active">
     <div class="stats-bar">
       <div class="stat-card"><div style="color: var(--text-muted); font-size: 11px;">TOTAL TICKETS</div><div class="stat-number" id="stat-total">0</div></div>
@@ -115,6 +123,18 @@
     <div id="tickets-list" class="ticket-list"><div class="empty-state">Loading tickets...</div></div>
   </div>
 
+  <!-- ACCOUNTS MANAGEMENT PANEL -->
+  <div id="view-accounts" class="view-panel">
+    <div class="stats-bar">
+      <div class="stat-card"><div style="color: var(--text-muted); font-size: 11px;">TOTAL REGISTERED ACCOUNTS</div><div class="stat-number" id="stat-users-total">0</div></div>
+      <div class="stat-card"><div style="color: var(--primary); font-size: 11px;">ADMINISTRATORS</div><div class="stat-number" id="stat-users-admins">0</div></div>
+      <div class="stat-card"><div style="color: var(--neutral); font-size: 11px;">CLIENT USERS</div><div class="stat-number" id="stat-users-clients">0</div></div>
+    </div>
+
+    <div id="users-list" class="user-list"><div class="empty-state">Loading accounts...</div></div>
+  </div>
+
+  <!-- DIRECT MESSAGES PANEL -->
   <div id="view-dms" class="view-panel">
     <div class="chat-layout">
       <div class="user-threads" id="threads-list"><div class="empty-state">Loading support threads...</div></div>
@@ -137,6 +157,7 @@
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  let currentAdminId = null;
   let allTickets = [];
   let allProfiles = [];
   let allMessages = [];
@@ -145,20 +166,23 @@
   async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
 
+    // STRICT ROLE ACCESS GUARD: Kick non-admins immediately
     if (!session) {
-      alert("Please sign in through the Client Portal first.");
+      alert("Access Denied: Please sign in through the Client Portal first.");
       window.location.href = "index.html";
       return;
     }
 
+    currentAdminId = session.user.id;
+
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('role')
-      .eq('id', session.user.id)
+      .eq('id', currentAdminId)
       .single();
 
     if (!profile || profile.role !== 'admin') {
-      alert("Access Denied: Admin authorization required.");
+      alert("⛔ Access Denied: You do not have Administrator permissions.");
       window.location.href = "index.html";
       return;
     }
@@ -181,6 +205,81 @@
     document.getElementById(`view-${tabName}`).classList.add('active');
   }
 
+  /* ------------------- ACCOUNTS MANAGEMENT ------------------- */
+  async function loadUsers() {
+    const { data: profiles } = await supabaseClient.from('profiles').select('*').order('created_at', { ascending: false });
+    allProfiles = profiles || [];
+    renderAccounts();
+  }
+
+  function renderAccounts() {
+    const container = document.getElementById('users-list');
+    container.innerHTML = '';
+
+    const totalUsers = allProfiles.length;
+    const adminCount = allProfiles.filter(p => p.role === 'admin').length;
+    const clientCount = totalUsers - adminCount;
+
+    document.getElementById('stat-users-total').innerText = totalUsers;
+    document.getElementById('stat-users-admins').innerText = adminCount;
+    document.getElementById('stat-users-clients').innerText = clientCount;
+
+    if (allProfiles.length === 0) {
+      container.innerHTML = `<div class="empty-state">No user accounts found.</div>`;
+      return;
+    }
+
+    allProfiles.forEach(user => {
+      const isAdmin = user.role === 'admin';
+      const isSelf = user.id === currentAdminId;
+
+      const card = document.createElement('div');
+      card.className = `user-card ${isAdmin ? 'is-admin' : 'is-client'}`;
+      card.innerHTML = `
+        <div class="user-header">
+          <div>
+            <strong style="font-size: 16px;">${user.email || 'No Email Provided'}</strong>
+            ${isSelf ? '<span style="font-size: 11px; color: var(--primary); margin-left: 8px;">(You)</span>' : ''}
+          </div>
+          <div class="header-actions">
+            <span class="status-badge ${isAdmin ? 'admin-role' : 'user-role'}">${isAdmin ? '🛡️ Administrator' : '👤 Client'}</span>
+            ${isAdmin ? 
+              `<button class="btn btn-demote" ${isSelf ? 'disabled style="opacity:0.5; cursor:not-allowed;" title="You cannot demote yourself"' : ''} onclick="updateUserRole('${user.id}', 'user')">Demote to Client</button>` : 
+              `<button class="btn btn-promote" onclick="updateUserRole('${user.id}', 'admin')">👑 Make Admin</button>`
+            }
+          </div>
+        </div>
+        <div class="details-grid" style="margin-bottom:0;">
+          <div><span>User ID</span><code style="font-size:11px;">${user.id}</code></div>
+          <div><span>System Role</span><strong>${user.role || 'user'}</strong></div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  async function updateUserRole(userId, newRole) {
+    if (userId === currentAdminId && newRole === 'user') {
+      return alert("Action blocked: You cannot demote your own active admin account.");
+    }
+
+    const actionText = newRole === 'admin' ? 'promote this user to Administrator' : 'demote this user to Client';
+    if (!confirm(`Are you sure you want to ${actionText}?`)) return;
+
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+
+    if (error) {
+      alert("Failed to update role: " + error.message);
+    } else {
+      await loadUsers();
+      renderTickets(); // Refresh emails/names if needed
+    }
+  }
+
+  /* ------------------- TICKET MANAGEMENT ------------------- */
   async function loadTickets() {
     const { data: tickets } = await supabaseClient.from('tickets').select('*').order('created_at', { ascending: false });
     allTickets = tickets || [];
@@ -285,24 +384,12 @@
 
   async function deleteTicket(ticketId) {
     if (!confirm("Are you sure you want to permanently delete this ticket record?")) return;
-
-    const { error } = await supabaseClient
-      .from('tickets')
-      .delete()
-      .eq('id', ticketId);
-
-    if (error) {
-      alert("Failed to delete ticket: " + error.message);
-    } else {
-      loadTickets();
-    }
+    const { error } = await supabaseClient.from('tickets').delete().eq('id', ticketId);
+    if (error) alert("Failed to delete ticket: " + error.message);
+    else loadTickets();
   }
 
-  async function loadUsers() {
-    const { data: profiles } = await supabaseClient.from('profiles').select('*');
-    allProfiles = profiles || [];
-  }
-
+  /* ------------------- DIRECT MESSAGES ------------------- */
   async function loadDMs() {
     const { data: msgs } = await supabaseClient.from('chat_messages').select('*').order('created_at', { ascending: true });
     allMessages = msgs || [];
@@ -348,14 +435,12 @@
 
   async function selectThread(userId) {
     activeChatUserId = userId;
-
     await supabaseClient
       .from('chat_messages')
       .update({ status: 'read' })
       .eq('user_id', userId)
       .eq('sender_role', 'user')
       .eq('status', 'unread');
-
     loadDMs();
   }
 
@@ -391,9 +476,11 @@
     loadDMs();
   }
 
+  /* ------------------- REALTIME SUBSCRIPTIONS ------------------- */
   function setupRealtime() {
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadDMs())
       .subscribe();
   }
