@@ -134,19 +134,68 @@
       justify-content: space-between; 
       transition: background 0.2s, border-color 0.2s;
     }
-    .thread-item:hover { background: var(--input-bg); }
-    .thread-item.active { background: var(--input-bg); border-left-color: var(--primary); }
-    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); word-break: break-all; }
-    .thread-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    .thread-item:hover {
+      background: var(--input-bg);
+    }
+    .thread-item.active { 
+      background: var(--input-bg); 
+      border-left-color: var(--primary); 
+    }
+    .thread-email { 
+      font-weight: 700; 
+      font-size: 13px; 
+      margin-bottom: 4px; 
+      color: var(--primary); 
+      word-break: break-all; 
+    }
+    .thread-preview { 
+      font-size: 12px; 
+      color: var(--text-muted); 
+      white-space: nowrap; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      max-width: 220px; 
+    }
 
     .green-dot { width: 9px; height: 9px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 8px var(--primary); flex-shrink: 0; }
 
-    .chat-window { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; background: var(--card-bg); }
-    .chat-messages { padding: 20px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
-    .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
+    .chat-window { 
+      display: flex; 
+      flex-direction: column; 
+      height: 100%; 
+      min-height: 0;
+      min-width: 0; 
+      background: var(--card-bg); 
+    }
+    .chat-messages { 
+      padding: 20px; 
+      overflow-y: auto; 
+      flex: 1; 
+      min-height: 0;
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px; 
+    }
+    .chat-bubble { 
+      max-width: 75%; 
+      padding: 12px 16px; 
+      border-radius: 10px; 
+      font-size: 13px; 
+      line-height: 1.4; 
+      word-break: break-word; 
+      overflow-wrap: break-word; 
+      white-space: pre-wrap; 
+    }
     .chat-bubble.user { background: #1c1c24; border: 1px solid var(--card-border); align-self: flex-start; color: #ffffff; }
     .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: #050505; font-weight: 600; }
-    .chat-input-row { padding: 14px; border-top: 1px solid var(--card-border); display: flex; gap: 12px; background: var(--input-bg); flex-shrink: 0; }
+    .chat-input-row { 
+      padding: 14px; 
+      border-top: 1px solid var(--card-border); 
+      display: flex; 
+      gap: 12px; 
+      background: var(--input-bg); 
+      flex-shrink: 0;
+    }
 
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   </style>
@@ -419,7 +468,6 @@
       const userEmail = getUserEmail(ticket.user_id);
       const rawStatus = ticket.status || 'Submitted';
       const statusKey = rawStatus.toLowerCase().replace(/\s+/g, '-');
-      const adminCount = ticket.admin_counter_count || 0;
 
       const card = document.createElement('div');
       card.className = `ticket-card ${statusKey}`;
@@ -452,10 +500,10 @@
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
             <div>
-              <label>Offer Alternative Time (Local Time) [Admin Counter ${adminCount + 1}/2]:</label>
+              <label>Offer Alternative Time (Local Time):</label>
               <input type="datetime-local" id="slot-picker-${ticket.id}">
             </div>
-            <button class="btn btn-offer" onclick="offerNewSlot('${ticket.id}', ${adminCount})">Offer Time</button>
+            <button class="btn btn-offer" onclick="offerNewSlot('${ticket.id}', ${ticket.negotiation_count || 0})">Offer Time</button>
           </div>
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
@@ -494,7 +542,7 @@
     }
   }
 
-  async function offerNewSlot(ticketId, currentAdminCount) {
+  async function offerNewSlot(ticketId, currentCount) {
     const val = document.getElementById(`slot-picker-${ticketId}`).value;
     if (!val) return alert("Select date/time first.");
 
@@ -502,16 +550,24 @@
     if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
 
     const isoTime = dateObj.toISOString();
-    const newAdminCount = (currentAdminCount || 0) + 1;
+    const newCount = (currentCount || 0) + 1;
 
-    // Admin offers counter-time. Does NOT auto-cancel here so client gets a chance to see & respond.
-    await supabaseClient.from('tickets').update({
-      status: 'Slot Offered',
-      offered_time: isoTime,
-      admin_counter_count: newAdminCount
-    }).eq('id', ticketId);
-
-    alert(`Slot offered to client! (Admin offer ${newAdminCount}/2)`);
+    // CANCEL ONLY ON 3rd COUNTER-OFFER ATTEMPT OR HIGHER
+    if (newCount >= 3) {
+      await supabaseClient.from('tickets').update({
+        status: 'Cancelled',
+        admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (3 attempts).',
+        negotiation_count: newCount
+      }).eq('id', ticketId);
+      alert("Ticket automatically cancelled: Maximum negotiation limit reached.");
+    } else {
+      await supabaseClient.from('tickets').update({
+        status: 'Slot Offered',
+        offered_time: isoTime,
+        negotiation_count: newCount
+      }).eq('id', ticketId);
+      alert(`Slot offered to client! (Negotiation step ${newCount}/2)`);
+    }
     loadTickets();
   }
 
