@@ -503,7 +503,7 @@
               <label>Offer Alternative Time (Local Time):</label>
               <input type="datetime-local" id="slot-picker-${ticket.id}">
             </div>
-            <button class="btn btn-offer" onclick="offerNewSlot('${ticket.id}', ${ticket.negotiation_count || 0})">Offer Time</button>
+            <button class="btn btn-offer" onclick="offerNewSlot('${ticket.id}')">Offer Time</button>
           </div>
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
@@ -542,7 +542,8 @@
     }
   }
 
-  async function offerNewSlot(ticketId, currentCount) {
+  // ADMIN OFFER TIME: Does NOT increment the client counter
+  async function offerNewSlot(ticketId) {
     const val = document.getElementById(`slot-picker-${ticketId}`).value;
     if (!val) return alert("Select date/time first.");
 
@@ -550,25 +551,19 @@
     if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
 
     const isoTime = dateObj.toISOString();
-    const newCount = (currentCount || 0) + 1;
 
-    // CANCEL ONLY ON 3rd COUNTER-OFFER ATTEMPT OR HIGHER
-    if (newCount >= 3) {
-      await supabaseClient.from('tickets').update({
-        status: 'Cancelled',
-        admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (3 attempts).',
-        negotiation_count: newCount
-      }).eq('id', ticketId);
-      alert("Ticket automatically cancelled: Maximum negotiation limit reached.");
+    const { error } = await supabaseClient.from('tickets').update({
+      status: 'Slot Offered',
+      offered_time: isoTime
+      // negotiation_count is intentionally omitted so client's counter is unaffected
+    }).eq('id', ticketId);
+
+    if (error) {
+      alert("Failed to offer slot: " + error.message);
     } else {
-      await supabaseClient.from('tickets').update({
-        status: 'Slot Offered',
-        offered_time: isoTime,
-        negotiation_count: newCount
-      }).eq('id', ticketId);
-      alert(`Slot offered to client! (Negotiation step ${newCount}/2)`);
+      alert("Slot offered to client!");
+      loadTickets();
     }
-    loadTickets();
   }
 
   async function closeBooking(ticketId) {
