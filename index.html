@@ -427,7 +427,8 @@
 <script>
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-  const DISCORD_INVITE_URL = "https://discord.com/invite/ChmhSPy6RR";
+  // Updated Discord Link
+  const DISCORD_INVITE_URL = "https://discord.gg/SaJMRJr4Y8";
 
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -448,12 +449,12 @@
   }
 
   async function syncUserProfile(userId, userEmail) {
-    // Force strict rule: ONLY aviatorrudra@gmail.com gets admin by default. ALL others get 'user'.
+    // Strictly restrict auto-admin: ONLY aviatorrudra@gmail.com gets admin by default. ALL others get 'user'.
     const assignedRole = userEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
 
     const { data: existingProfile } = await supabaseClient
       .from('profiles')
-      .select('role')
+      .select('id, email, role')
       .eq('id', userId)
       .maybeSingle();
 
@@ -464,7 +465,7 @@
         role: assignedRole
       }]);
     } else {
-      // Ensure email stays fresh in profiles table
+      // Ensure email stays fresh in profiles table for older users
       await supabaseClient.from('profiles').update({ email: userEmail }).eq('id', userId);
     }
   }
@@ -724,7 +725,6 @@
   }
 
   async function submitBooking() {
-    // Strictly restrict to only 1 active booking at a time
     const activeTicket = myTickets.find(t => t.status !== 'Cancelled' && t.status !== 'Closed');
     if (activeTicket) {
       return alert(`You already have an active booking (#TCK-${activeTicket.ticket_number}). Please complete or cancel your existing session before booking a new slot.`);
