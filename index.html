@@ -879,11 +879,12 @@
       sendBtn.disabled = true;
       input.value = '';
 
+      // User sending a message is auto-marked as read on their side
       const { error } = await supabaseClient.from('chat_messages').insert([{
         user_id: currentUserId,
         sender_role: 'user',
         message: msg,
-        status: 'unread'
+        status: 'read'
       }]);
 
       if (error) {
@@ -914,6 +915,7 @@
 
     if (!currentUserId) return;
 
+    // Dot strictly appears ONLY if an ADMIN sent a message and status is 'unread'
     const { data: unread } = await supabaseClient
       .from('chat_messages')
       .select('id')
