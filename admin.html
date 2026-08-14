@@ -98,22 +98,99 @@
     .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
     .btn-demote:hover { background-color: var(--warning); color: #000; }
 
-    .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 580px; min-height: 500px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
-    .user-threads { border-right: 1px solid var(--card-border); display: flex; flex-direction: column; height: 100%; min-width: 0; background: var(--card-bg); }
-    .threads-scroll { overflow-y: auto; flex: 1; min-height: 0; }
-    .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
-    .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
-    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); word-break: break-all; }
-    .thread-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+    /* LAYOUT & CHAT FIXES */
+    .chat-layout { 
+      display: grid; 
+      grid-template-columns: 320px 1fr; 
+      gap: 16px; 
+      height: 580px; 
+      max-height: 80vh;
+      background: var(--card-bg); 
+      border: 1px solid var(--card-border); 
+      border-radius: 12px; 
+      overflow: hidden; 
+    }
+    .user-threads { 
+      border-right: 1px solid var(--card-border); 
+      display: flex; 
+      flex-direction: column; 
+      height: 100%; 
+      min-width: 0; 
+      background: var(--card-bg); 
+    }
+    .threads-scroll { 
+      overflow-y: auto; 
+      flex: 1; 
+      min-height: 0; 
+    }
+    .thread-item { 
+      padding: 16px; 
+      border-bottom: 1px solid var(--card-border); 
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      transition: background 0.2s;
+    }
+    .thread-item:hover, .thread-item.active { 
+      background: var(--input-bg); 
+      border-left: 4px solid var(--primary); 
+    }
+    .thread-email { 
+      font-weight: 700; 
+      font-size: 13px; 
+      margin-bottom: 4px; 
+      color: var(--primary); 
+      word-break: break-all; 
+    }
+    .thread-preview { 
+      font-size: 12px; 
+      color: var(--text-muted); 
+      white-space: nowrap; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      max-width: 220px; 
+    }
 
     .green-dot { width: 9px; height: 9px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 8px var(--primary); flex-shrink: 0; }
 
-    .chat-window { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-width: 0; background: var(--card-bg); }
-    .chat-messages { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
-    .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
+    .chat-window { 
+      display: flex; 
+      flex-direction: column; 
+      height: 100%; 
+      min-height: 0;
+      min-width: 0; 
+      background: var(--card-bg); 
+    }
+    .chat-messages { 
+      padding: 20px; 
+      overflow-y: auto; 
+      flex: 1; 
+      min-height: 0;
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px; 
+    }
+    .chat-bubble { 
+      max-width: 75%; 
+      padding: 12px 16px; 
+      border-radius: 10px; 
+      font-size: 13px; 
+      line-height: 1.4; 
+      word-break: break-word; 
+      overflow-wrap: break-word; 
+      white-space: pre-wrap; 
+    }
     .chat-bubble.user { background: #1c1c24; border: 1px solid var(--card-border); align-self: flex-start; color: #ffffff; }
     .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: #050505; font-weight: 600; }
-    .chat-input-row { padding: 14px; border-top: 1px solid var(--card-border); display: flex; gap: 12px; background: var(--input-bg); }
+    .chat-input-row { 
+      padding: 14px; 
+      border-top: 1px solid var(--card-border); 
+      display: flex; 
+      gap: 12px; 
+      background: var(--input-bg); 
+      flex-shrink: 0;
+    }
 
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   </style>
@@ -164,7 +241,7 @@
     <div class="chat-layout">
       <div class="user-threads">
         <div style="padding: 12px; border-bottom: 1px solid var(--card-border); background: var(--input-bg);">
-          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Start / Select Conversation</label>
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Select Conversation</label>
           <select id="user-chat-selector" onchange="selectThread(this.value)">
             <option value="">-- Choose User / Self --</option>
           </select>
@@ -620,7 +697,7 @@
   }
 
   async function sendAdminMessage() {
-    if (!activeChatUserId) return alert("Select a user or conversation thread first from the dropdown.");
+    if (!activeChatUserId) return alert("Select a user or conversation thread first.");
     const input = document.getElementById('admin-chat-input');
     const sendBtn = document.getElementById('admin-send-btn');
     const msg = input.value.trim();
