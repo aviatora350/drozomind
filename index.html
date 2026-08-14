@@ -31,7 +31,7 @@
       background: var(--bg-color); 
       color: var(--text-main); 
       padding: 16px; 
-      padding-bottom: 100px;
+      padding-bottom: 90px;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
@@ -141,21 +141,41 @@
     .chat-bubble.user { background: var(--card-bg); border: 1px solid var(--card-border); align-self: flex-end; color: var(--text-main); }
     .chat-bubble.admin { background: var(--primary); align-self: flex-start; color: var(--primary-text); font-weight: 600; }
 
+    /* Fixed Bottom Navigation Alignment UI */
     .bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
-      background: #08080b; border-top: 1px solid var(--card-border);
-      display: flex; justify-space-around: align-items: center; z-index: 1000;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: #08080b;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
     }
     .nav-item {
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      background: transparent; border: none; color: var(--text-muted);
-      font-size: 11px; font-weight: 600; cursor: pointer; width: 20%; position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      flex: 1;
+      height: 100%;
+      position: relative;
     }
-    .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+    .nav-item svg { width: 22px; height: 22px; fill: currentColor; }
     .nav-item.active { color: var(--primary); }
 
     .unread-dot {
-      position: absolute; top: 2px; right: 28%;
+      position: absolute; top: 10px; right: 30%;
       width: 9px; height: 9px; background: var(--primary);
       border-radius: 50%; box-shadow: 0 0 8px var(--primary); display: none;
     }
@@ -375,7 +395,6 @@
       const { data, error } = await supabaseClient.auth.signUp({ email, password, options });
       if (error) return alert("Sign-Up Error: " + error.message);
       
-      // Auto-create profile record
       if (data.user) {
         await supabaseClient.from('profiles').upsert([{ 
           id: data.user.id, 
@@ -404,7 +423,6 @@
     currentUserId = session.user.id;
     currentUserEmail = session.user.email;
 
-    // Ensure profile exists in profiles table
     let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUserId).maybeSingle();
     if (!profile) {
       await supabaseClient.from('profiles').upsert([{
@@ -534,6 +552,16 @@
       ${activeTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${activeTicket.offered_time}</div>` : ''}
       ${activeTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${activeTicket.accepted_time}</div>` : ''}
       ${activeTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${activeTicket.admin_comment}</em></div>` : ''}
+
+      ${(status === 'Accepted' || status === 'Confirmed') ? `
+        <div style="background: rgba(155, 240, 11, 0.12); border: 1px solid var(--primary); padding: 16px; border-radius: 12px; margin-top: 14px; text-align: center;">
+          <div style="font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 6px;">🎉 Your Session Slot is Confirmed!</div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; line-height:1.4;">Please join our official Discord server to attend your session and connect with your therapist.</p>
+          <a href="https://discord.com/invite/ChmhSPy6RR" target="_blank" rel="noopener noreferrer" class="btn" style="display: inline-block; text-decoration: none; width: auto; padding: 10px 22px;">
+            💬 Join Discord Server
+          </a>
+        </div>
+      ` : ''}
 
       ${status === 'Slot Offered' ? `
         <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; margin-top: 12px;">
