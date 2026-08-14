@@ -97,12 +97,12 @@
     .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
     .btn-demote:hover { background-color: var(--warning); color: #000; }
 
-    .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
+    .chat-layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
     .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
     .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
     .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
-    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--text-main); }
-    .thread-preview { font-size: 12px; color: var(--text-muted); }
+    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); }
+    .thread-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 
     .green-dot { width: 9px; height: 9px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 8px var(--primary); flex-shrink: 0; }
 
@@ -162,7 +162,7 @@
     <div class="chat-layout">
       <div class="user-threads" id="threads-list"><div class="empty-state">Loading support threads...</div></div>
       <div class="chat-window">
-        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a conversation thread.</div></div>
+        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a conversation thread to view messages.</div></div>
         <div class="chat-input-row">
           <input type="text" id="admin-chat-input" placeholder="Type a response...">
           <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
@@ -247,7 +247,7 @@
     document.getElementById('stat-users-clients').innerText = clientCount;
 
     if (allProfiles.length === 0) {
-      container.innerHTML = `<div class="empty-state">No user accounts found.</div>`;
+      container.innerHTML = `<div class="empty-state">No registered accounts found in the profiles table.</div>`;
       return;
     }
 
@@ -260,7 +260,7 @@
       card.innerHTML = `
         <div class="user-header">
           <div>
-            <strong style="font-size: 16px;">${user.email || 'No Email Provided'}</strong>
+            <strong style="font-size: 16px;">${user.email || 'No Email Recorded'}</strong>
             ${isSelf ? '<span style="font-size: 11px; color: var(--primary); margin-left: 8px;">(You)</span>' : ''}
           </div>
           <div class="header-actions">
@@ -272,7 +272,7 @@
           </div>
         </div>
         <div class="details-grid" style="margin-bottom:0;">
-          <div><span>Email ID</span><strong style="color: var(--primary);">${user.email || 'No Email Provided'}</strong></div>
+          <div><span>Email ID</span><strong style="color: var(--primary);">${user.email || 'No Email Recorded'}</strong></div>
           <div><span>System Role</span><strong>${user.role || 'user'}</strong></div>
         </div>
       `;
@@ -321,7 +321,7 @@
     container.innerHTML = '';
 
     if (allTickets.length === 0) {
-      container.innerHTML = `<div class="empty-state">No tickets found.</div>`;
+      container.innerHTML = `<div class="empty-state">No session tickets found.</div>`;
       return;
     }
 
@@ -439,14 +439,17 @@
       const msgs = userMap[uId];
       const lastMsg = msgs[msgs.length - 1];
       const profile = allProfiles.find(p => p.id === uId);
+      
+      // Ensure EMAIL is displayed rather than raw ID
+      const userEmailDisplay = (profile && profile.email) ? profile.email : `User (${uId.substring(0, 8)}...)`;
       const hasUnread = msgs.some(m => m.sender_role === 'user' && m.status === 'unread');
 
       const item = document.createElement('div');
       item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
       item.onclick = () => selectThread(uId);
       item.innerHTML = `
-        <div>
-          <div class="thread-email">${profile ? profile.email : uId}</div>
+        <div style="overflow: hidden;">
+          <div class="thread-email" title="${userEmailDisplay}">${userEmailDisplay}</div>
           <div class="thread-preview">${lastMsg.message}</div>
         </div>
         ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
