@@ -552,20 +552,21 @@
     const isoTime = dateObj.toISOString();
     const newCount = (currentCount || 0) + 1;
 
-    // Auto-cancel if total attempt count reaches 3
+    // CANCEL ONLY ON 3rd COUNTER-OFFER ATTEMPT OR HIGHER
     if (newCount >= 3) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
         admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (3 attempts).',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      alert("Ticket automatically cancelled as maximum negotiation limit was reached.");
+      alert("Ticket automatically cancelled: Maximum negotiation limit reached.");
     } else {
       await supabaseClient.from('tickets').update({
         status: 'Slot Offered',
         offered_time: isoTime,
         negotiation_count: newCount
       }).eq('id', ticketId);
+      alert(`Slot offered to client! (Negotiation step ${newCount}/2)`);
     }
     loadTickets();
   }
@@ -619,7 +620,6 @@
         ...profileUserIds
       ]));
 
-      // Sort threads by recent message activity
       allUserIds.sort((a, b) => {
         const msgsA = userMap[a] || [];
         const msgsB = userMap[b] || [];
@@ -641,7 +641,6 @@
         const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         const userEmailDisplay = getUserEmail(uId);
 
-        // Green dot strictly appears if user has an unread message AND thread is NOT currently selected
         const isSelected = (activeChatUserId === uId);
         const hasUnread = !isSelected && msgs.some(m => 
           m && 
@@ -680,7 +679,6 @@
     if (input) input.disabled = false;
     if (sendBtn) sendBtn.disabled = false;
 
-    // Immediately mark unread messages for THIS specific user as read in local state
     allMessages.forEach(m => {
       if (m && m.user_id === userId && m.sender_role === 'user') {
         m.status = 'read';
@@ -690,7 +688,6 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Sync database status for this specific user only
     try {
       await supabaseClient
         .from('chat_messages')
@@ -783,7 +780,6 @@
         const newMsg = payload.new;
         if (!newMsg || !newMsg.user_id) return;
 
-        // Push new incoming message into local array
         const existingIdx = allMessages.findIndex(m => m.id === newMsg.id);
         if (existingIdx === -1) {
           allMessages.push(newMsg);
@@ -791,7 +787,6 @@
           allMessages[existingIdx] = newMsg;
         }
 
-        // If message arrives for active chat window, mark read automatically
         if (activeChatUserId && newMsg.user_id === activeChatUserId) {
           if (newMsg.sender_role === 'user') {
             newMsg.status = 'read';
