@@ -14,7 +14,6 @@
       --primary: #9bf00b;
       --primary-hover: #82cc08;
       --primary-text: #050505;
-      --success: #9bf00b;
       --warning: #f59e0b;
       --danger: #ef4444;
       --neutral: #6b7280;
@@ -28,19 +27,13 @@
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 24px; }
     .container { max-width: 1200px; margin: 0 auto; }
 
-    input:-webkit-autofill { -webkit-text-fill-color: var(--text-main) !important; -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important; }
-
     header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); }
     .logo-title { font-size: 22px; font-weight: 700; color: var(--primary); }
-    .btn-portal { background: transparent; color: var(--text-main); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; }
-    .btn-portal:hover { background: var(--primary); color: var(--primary-text); }
+    .btn-portal { background: transparent; color: var(--text-main); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer; }
 
     .tab-nav { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; }
     .tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--card-border); padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
     .tab-btn.active, .tab-btn:hover { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
-    
-    .badge-count { background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px; display: none; }
-    .badge-count.show { display: inline-block; }
 
     .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 18px; border-radius: 12px; text-align: center; }
@@ -49,43 +42,37 @@
     .view-panel { display: none; }
     .view-panel.active { display: block; }
 
-    .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; }
-    .filter-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .filter-btn.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
-
     .ticket-list { display: flex; flex-direction: column; gap: 18px; }
     .ticket-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 6px solid var(--primary); border-radius: 12px; padding: 20px; }
-    .ticket-card.accepted { border-left-color: var(--primary); }
-    .ticket-card.offered { border-left-color: var(--warning); }
-    .ticket-card.cancelled { border-left-color: var(--danger); }
-    .ticket-card.closed { border-left-color: var(--neutral); }
+    .ticket-card.cancelled, .ticket-card.closed { border-left-color: var(--danger); }
 
     .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
     .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
     .status-badge.accepted { background: var(--primary); }
     .status-badge.offered { background: var(--warning); }
-    .status-badge.cancelled { background: var(--danger); color: #fff; }
+    .status-badge.cancelled, .status-badge.closed { background: var(--danger); color: #fff; }
 
     .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: var(--input-bg); border: 1px solid var(--card-border); padding: 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
     .details-grid span { display: block; font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
 
     .action-box { background: var(--input-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; }
     .action-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 12px; }
-    label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; }
+    
     input[type="datetime-local"], input[type="text"] { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
 
-    .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); white-space: nowrap; }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); }
     .btn-accept { background-color: var(--primary); }
     .btn-offer { background-color: var(--warning); color: #000; }
     .btn-cancel { background-color: var(--danger); color: #fff; }
-    .btn-close { background-color: var(--neutral); color: #fff; }
 
-    .chat-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
+    .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
     .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
-    .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; }
+    .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
     .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
     .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--text-main); }
     .thread-preview { font-size: 12px; color: var(--text-muted); }
+
+    .green-dot { width: 9px; height: 9px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 8px var(--primary); flex-shrink: 0; }
 
     .chat-window { display: flex; flex-direction: column; justify-content: space-between; }
     .chat-messages { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
@@ -93,10 +80,6 @@
     .chat-bubble.user { background: var(--input-bg); border: 1px solid var(--card-border); align-self: flex-start; color: var(--text-main); }
     .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: var(--primary-text); font-weight: 600; }
     .chat-input-row { padding: 14px; border-top: 1px solid var(--card-border); display: flex; gap: 12px; background: var(--input-bg); }
-
-    .user-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--card-border); }
-    .user-table th, .user-table td { padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 13px; }
-    .user-table th { background: var(--input-bg); color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700; }
 
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   </style>
@@ -106,44 +89,33 @@
 <div class="container">
   <header>
     <div style="display: flex; align-items: center; gap: 16px;">
-      <div class="logo-title">🛡️ Drozo Mind Therapy - Admin Dashboard</div>
+      <div class="logo-title">🛡️ Drozo Mind Therapy - Admin Panel</div>
       <a href="index.html" class="btn-portal">← Client Portal</a>
     </div>
-    <span id="connection-status" style="font-size: 12px; color: var(--warning); font-weight: 600;">● Connecting...</span>
+    <button class="btn-portal" style="border-color: var(--danger); color: var(--danger);" onclick="adminSignOut()">Sign Out</button>
   </header>
 
   <div class="tab-nav">
     <button class="tab-btn active" onclick="switchTab('tickets', this)">🎟️ Bookings & Sessions</button>
-    <button class="tab-btn" onclick="switchTab('dms', this)">💬 Direct Messages <span id="dm-notification-badge" class="badge-count">0</span></button>
-    <button class="tab-btn" onclick="switchTab('users', this)">👥 Users & Roles</button>
+    <button class="tab-btn" onclick="switchTab('dms', this)">💬 Direct Messages</button>
   </div>
 
-  <!-- TICKETS TAB -->
   <div id="view-tickets" class="view-panel active">
     <div class="stats-bar">
       <div class="stat-card"><div style="color: var(--text-muted); font-size: 11px;">TOTAL TICKETS</div><div class="stat-number" id="stat-total">0</div></div>
       <div class="stat-card"><div style="color: var(--warning); font-size: 11px;">PENDING</div><div class="stat-number" id="stat-pending">0</div></div>
       <div class="stat-card"><div style="color: var(--primary); font-size: 11px;">CONFIRMED</div><div class="stat-number" id="stat-active">0</div></div>
-      <div class="stat-card"><div style="color: var(--neutral); font-size: 11px;">CLOSED/CANCELLED</div><div class="stat-number" id="stat-closed">0</div></div>
-    </div>
-
-    <div class="filter-bar">
-      <button class="filter-btn active" onclick="setTicketFilter('all', this)">All</button>
-      <button class="filter-btn" onclick="setTicketFilter('pending', this)">Pending</button>
-      <button class="filter-btn" onclick="setTicketFilter('accepted', this)">Accepted</button>
-      <button class="filter-btn" onclick="setTicketFilter('offered', this)">Offered</button>
-      <button class="filter-btn" onclick="setTicketFilter('closed', this)">Closed</button>
+      <div class="stat-card"><div style="color: var(--danger); font-size: 11px;">CLOSED/CANCELLED</div><div class="stat-number" id="stat-closed">0</div></div>
     </div>
 
     <div id="tickets-list" class="ticket-list"><div class="empty-state">Loading tickets...</div></div>
   </div>
 
-  <!-- DIRECT MESSAGES TAB -->
   <div id="view-dms" class="view-panel">
     <div class="chat-layout">
-      <div class="user-threads" id="threads-list"><div class="empty-state">Loading threads...</div></div>
+      <div class="user-threads" id="threads-list"><div class="empty-state">Loading support threads...</div></div>
       <div class="chat-window">
-        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a thread on the left.</div></div>
+        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a conversation thread.</div></div>
         <div class="chat-input-row">
           <input type="text" id="admin-chat-input" placeholder="Type a response...">
           <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
@@ -152,17 +124,6 @@
     </div>
   </div>
 
-  <!-- USER MANAGEMENT TAB -->
-  <div id="view-users" class="view-panel">
-    <table class="user-table">
-      <thead>
-        <tr><th>User Email</th><th>User ID</th><th>Role</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="users-table-body">
-        <tr><td colspan="4" class="empty-state">Loading users...</td></tr>
-      </tbody>
-    </table>
-  </div>
 </div>
 
 <script>
@@ -175,20 +136,45 @@
   let allTickets = [];
   let allProfiles = [];
   let allMessages = [];
-  let currentTicketFilter = 'all';
   let activeChatUserId = null;
+
+  async function init() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+      alert("Please sign in through the Client Portal first.");
+      window.location.href = "index.html";
+      return;
+    }
+
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single();
+
+    if (!profile || profile.role !== 'admin') {
+      alert("Access Denied: Admin authorization required.");
+      window.location.href = "index.html";
+      return;
+    }
+
+    await loadUsers();
+    await loadTickets();
+    await loadDMs();
+    setupRealtime();
+  }
+
+  async function adminSignOut() {
+    await supabaseClient.auth.signOut();
+    window.location.href = "index.html";
+  }
 
   function switchTab(tabName, btnElement) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
     btnElement.classList.add('active');
     document.getElementById(`view-${tabName}`).classList.add('active');
-
-    if (tabName === 'dms') {
-      const badge = document.getElementById('dm-notification-badge');
-      badge.classList.remove('show');
-      badge.innerText = '0';
-    }
   }
 
   async function loadTickets() {
@@ -200,57 +186,38 @@
 
   function updateTicketStats() {
     document.getElementById('stat-total').innerText = allTickets.length;
-    document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('pending')).length;
+    document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('submit')).length;
     document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted').length;
     document.getElementById('stat-closed').innerText = allTickets.filter(t => t.status === 'Closed' || t.status === 'Cancelled').length;
-  }
-
-  function setTicketFilter(filter, el) {
-    currentTicketFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    renderTickets();
   }
 
   function renderTickets() {
     const container = document.getElementById('tickets-list');
     container.innerHTML = '';
 
-    const filtered = allTickets.filter(t => {
-      const s = (t.status || '').toLowerCase();
-      if (currentTicketFilter === 'all') return true;
-      if (currentTicketFilter === 'pending') return s.includes('pending');
-      if (currentTicketFilter === 'accepted') return s === 'accepted';
-      if (currentTicketFilter === 'offered') return s.includes('offered') || s.includes('slot');
-      if (currentTicketFilter === 'closed') return s === 'closed' || s === 'cancelled';
-      return true;
-    });
-
-    if (filtered.length === 0) {
-      container.innerHTML = `<div class="empty-state">No tickets under "${currentTicketFilter}".</div>`;
+    if (allTickets.length === 0) {
+      container.innerHTML = `<div class="empty-state">No tickets found.</div>`;
       return;
     }
 
-    filtered.forEach(ticket => {
-      const statusKey = getStatusKey(ticket.status);
+    allTickets.forEach(ticket => {
       const userProfile = allProfiles.find(p => p.id === ticket.user_id);
       const userEmail = userProfile ? userProfile.email : ticket.user_id;
+      const statusKey = (ticket.status || 'Submitted').toLowerCase();
 
       const card = document.createElement('div');
       card.className = `ticket-card ${statusKey}`;
       card.innerHTML = `
         <div class="ticket-header">
-          <strong style="font-size: 16px;">Ticket #${ticket.ticket_number}</strong>
-          <span class="status-badge ${statusKey}">${ticket.status || 'Pending'}</span>
+          <strong style="font-size: 16px;">Ticket #TCK-${ticket.ticket_number}</strong>
+          <span class="status-badge ${statusKey}">${ticket.status}</span>
         </div>
 
         <div class="details-grid">
           <div><span>Client Email</span>${userEmail}</div>
           <div><span>Requested Time</span><strong>${ticket.pref_time || 'N/A'}</strong></div>
-          <div><span>Offered Time</span><strong>${ticket.offered_time || 'None'}</strong></div>
+          <div><span>Offered Slot</span><strong>${ticket.offered_time || 'None'}</strong></div>
           <div><span>Confirmed Time</span><strong style="color: var(--primary);">${ticket.accepted_time || 'Not Confirmed'}</strong></div>
-          <div><span>Negotiations Used</span><strong>${ticket.negotiation_count || 0}/2</strong></div>
-          <div><span>Notes / Comment</span>${ticket.admin_comment || ticket.notes || 'None'}</div>
         </div>
 
         <div class="action-box">
@@ -265,23 +232,17 @@
           </div>
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
-            <div><label>Cancel Request (Reason):</label><input type="text" id="cancel-reason-${ticket.id}" placeholder="Reason..."></div>
-            <button class="btn btn-cancel" style="margin-top:16px;" onclick="cancelBooking('${ticket.id}')">Cancel</button>
+            <div><label>Close Session (Reason):</label><input type="text" id="cancel-reason-${ticket.id}" placeholder="Specify reason..."></div>
+            <button class="btn btn-cancel" style="margin-top:16px;" onclick="closeBooking('${ticket.id}')">Close Session</button>
+          </div>
+          <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="btn btn-cancel" onclick="deleteTicket('${ticket.id}')">🗑️ Delete Ticket</button>
           </div>
         </div>
       `;
       container.appendChild(card);
     });
-  }
-
-  function getStatusKey(status) {
-    if (!status) return 'pending';
-    const s = status.toLowerCase();
-    if (s.includes('accept')) return 'accepted';
-    if (s.includes('offered') || s.includes('slot')) return 'offered';
-    if (s.includes('cancel')) return 'cancelled';
-    if (s.includes('close')) return 'closed';
-    return 'pending';
   }
 
   async function acceptTicket(ticketId, chosenTime) {
@@ -294,7 +255,7 @@
     const val = document.getElementById(`slot-picker-${ticketId}`).value;
     if (!val) return alert("Select date/time first.");
 
-    const formatted = new Date(val).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    const formatted = new Date(val).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
     const newCount = currentCount + 1;
 
     if (newCount >= 2) {
@@ -303,7 +264,6 @@
         admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (2 attempts).',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      alert("Ticket auto-cancelled because it reached the 2 negotiation attempt limit.");
     } else {
       await supabaseClient.from('tickets').update({
         status: 'Slot Offered',
@@ -311,46 +271,24 @@
         negotiation_count: newCount
       }).eq('id', ticketId);
     }
-
     loadTickets();
   }
 
-  async function cancelBooking(ticketId) {
-    const reason = document.getElementById(`cancel-reason-${ticketId}`).value.trim() || 'Cancelled by admin.';
-    await supabaseClient.from('tickets').update({ status: 'Cancelled', admin_comment: reason }).eq('id', ticketId);
+  async function closeBooking(ticketId) {
+    const reason = document.getElementById(`cancel-reason-${ticketId}`).value.trim() || 'Session closed by administrator.';
+    await supabaseClient.from('tickets').update({ status: 'Closed', admin_comment: reason }).eq('id', ticketId);
+    loadTickets();
+  }
+
+  async function deleteTicket(ticketId) {
+    if (!confirm("Are you sure you want to permanently delete this ticket?")) return;
+    await supabaseClient.from('tickets').delete().eq('id', ticketId);
     loadTickets();
   }
 
   async function loadUsers() {
-    const { data: profiles } = await supabaseClient.from('profiles').select('*').order('email', { ascending: true });
+    const { data: profiles } = await supabaseClient.from('profiles').select('*');
     allProfiles = profiles || [];
-    renderUsers();
-  }
-
-  function renderUsers() {
-    const tbody = document.getElementById('users-table-body');
-    tbody.innerHTML = '';
-    allProfiles.forEach(user => {
-      const isAdmin = user.role === 'admin';
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${user.email}</strong></td>
-        <td style="font-family:monospace; font-size:11px; color:var(--text-muted);">${user.id}</td>
-        <td><span class="status-badge ${isAdmin ? 'accepted' : 'closed'}">${user.role || 'user'}</span></td>
-        <td>
-          <button class="btn ${isAdmin ? 'btn-cancel' : 'btn-accept'}" onclick="toggleUserRole('${user.id}', '${isAdmin ? 'user' : 'admin'}')">
-            ${isAdmin ? 'Demote to User' : 'Make Admin'}
-          </button>
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
-  }
-
-  async function toggleUserRole(userId, newRole) {
-    await supabaseClient.from('profiles').update({ role: newRole }).eq('id', userId);
-    await loadUsers();
-    loadTickets();
   }
 
   async function loadDMs() {
@@ -363,6 +301,7 @@
   function renderThreads() {
     const container = document.getElementById('threads-list');
     container.innerHTML = '';
+
     const userMap = {};
     allMessages.forEach(m => {
       if (!userMap[m.user_id]) userMap[m.user_id] = [];
@@ -370,26 +309,42 @@
     });
 
     const userIds = Object.keys(userMap);
+    if (userIds.length === 0) {
+      container.innerHTML = `<div class="empty-state">No chat messages yet.</div>`;
+      return;
+    }
+
     userIds.forEach(uId => {
       const msgs = userMap[uId];
       const lastMsg = msgs[msgs.length - 1];
       const profile = allProfiles.find(p => p.id === uId);
+      const hasUnread = msgs.some(m => m.sender_role === 'user' && m.status === 'unread');
 
       const item = document.createElement('div');
       item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
       item.onclick = () => selectThread(uId);
       item.innerHTML = `
-        <div class="thread-email">${profile ? profile.email : uId}</div>
-        <div class="thread-preview">${lastMsg.message}</div>
+        <div>
+          <div class="thread-email">${profile ? profile.email : uId}</div>
+          <div class="thread-preview">${lastMsg.message}</div>
+        </div>
+        ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
       `;
       container.appendChild(item);
     });
   }
 
-  function selectThread(userId) {
+  async function selectThread(userId) {
     activeChatUserId = userId;
-    renderThreads();
-    renderChatWindow(userId);
+
+    await supabaseClient
+      .from('chat_messages')
+      .update({ status: 'read' })
+      .eq('user_id', userId)
+      .eq('sender_role', 'user')
+      .eq('status', 'unread');
+
+    loadDMs();
   }
 
   function renderChatWindow(userId) {
@@ -408,7 +363,7 @@
   }
 
   async function sendAdminMessage() {
-    if (!activeChatUserId) return alert("Select a thread first.");
+    if (!activeChatUserId) return alert("Select a conversation thread first.");
     const input = document.getElementById('admin-chat-input');
     const msg = input.value.trim();
     if (!msg) return;
@@ -417,7 +372,7 @@
       user_id: activeChatUserId,
       sender_role: 'admin',
       message: msg,
-      status: 'replied'
+      status: 'unread'
     }]);
 
     input.value = '';
@@ -428,21 +383,7 @@
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadDMs())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
-      .subscribe((status) => {
-        const conn = document.getElementById('connection-status');
-        if (status === 'SUBSCRIBED') {
-          conn.innerText = '● Realtime Connected';
-          conn.style.color = 'var(--primary)';
-        }
-      });
-  }
-
-  async function init() {
-    await loadUsers();
-    await loadTickets();
-    await loadDMs();
-    setupRealtime();
+      .subscribe();
   }
 
   init();
