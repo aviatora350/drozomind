@@ -828,28 +828,28 @@
     if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
 
     const isoTime = dateObj.toISOString();
-    const newCount = currentCount + 1;
+    const newCount = (currentCount || 0) + 1;
 
-    // IF THIRD CHANGE ATTEMPT -> AUTO CANCEL
+    // CANCEL ONLY ON THE 3rd COUNTER-OFFER ATTEMPT
     if (newCount >= 3) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
         admin_comment: 'Auto-cancelled: Reached maximum slot change limit (3 attempts).',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      alert("Session cancelled automatically because maximum change attempts were reached.");
+      alert("Session cancelled automatically because maximum change attempts (3) were reached.");
       loadMyTickets();
       return;
     }
 
-    // IF SECOND CHANGE ATTEMPT -> SHOW WARNING MODAL BEFORE SUBMITTING
+    // SHOW WARNING ON THE 2nd COUNTER-OFFER ATTEMPT
     if (newCount === 2) {
       pendingNegotiation = { ticketId, isoTime, newCount };
       document.getElementById('negotiation-warning-modal').style.display = 'flex';
       return;
     }
 
-    // FIRST CHANGE ATTEMPT -> EXECUTE DIRECTLY
+    // FIRST COUNTER-OFFER ATTEMPT
     await executeProposal(ticketId, isoTime, newCount);
   }
 
