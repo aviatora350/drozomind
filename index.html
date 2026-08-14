@@ -2,643 +2,709 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drozo Mind Therapy - Client Portal</title>
-  
-  <!-- Fonts & Icons -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
-  <!-- Cloudflare Turnstile -->
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-
   <style>
     :root {
-      --bg-black: #030303;
-      --card-bg: rgba(18, 18, 20, 0.85);
-      --card-border: rgba(39, 39, 42, 0.8);
-      --accent-lime: #a3e635;
-      --accent-lime-hover: #84cc16;
-      --accent-lime-glow: rgba(163, 230, 53, 0.15);
-      --discord-purple: #5865F2;
-      --discord-purple-hover: #4752C4;
-      --text-primary: #f4f4f5;
-      --text-muted: #a1a1aa;
+      color-scheme: dark;
+      --bg-color: #060608;
+      --card-bg: #111115;
+      --card-border: #1e1e26;
+      --primary: #9bf00b;
+      --primary-hover: #82cc08;
+      --primary-text: #050505;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --neutral: #6b7280;
+      --text-main: #ffffff;
+      --text-muted: #9ca3af;
+      --input-bg: #09090c;
+      --input-border: #24242e;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
-    html, body { width: 100%; max-width: 100vw; overflow-x: hidden; background: var(--bg-black); color: var(--text-primary); min-height: 100vh; }
-    body { display: flex; flex-direction: column; padding-bottom: 75px; }
-
-    .ambient-glow {
-      position: fixed; top: -100px; right: -100px; width: 350px; height: 350px;
-      background: radial-gradient(circle, var(--accent-lime-glow) 0%, transparent 70%);
-      pointer-events: none; z-index: 0;
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; 
+      background: var(--bg-color); 
+      color: var(--text-main); 
+      padding: 16px; 
+      padding-bottom: 100px; /* Space for bottom nav bar */
     }
 
-    #toastContainer {
-      position: fixed; top: 15px; right: 15px; z-index: 99999;
-      display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 30px);
-    }
-    .toast {
-      background: #121212; border: 1px solid var(--card-border); color: #fff;
-      padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transform: translateY(-10px);
-      transition: 0.3s ease; font-size: 0.85rem; font-weight: 500;
-    }
-    .toast.show { opacity: 1; transform: translateY(0); }
-    .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
-    .toast-error { border-color: #ef4444; color: #fca5a5; }
+    .container { max-width: 600px; margin: 0 auto; }
 
-    .main-container { padding: 16px; max-width: 600px; margin: 0 auto; width: 100%; z-index: 1; position: relative; }
-
-    .user-header-card {
-      background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border);
-      border-radius: 14px; padding: 14px 18px; margin-bottom: 16px;
-      display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    /* Autofill dark mode override */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text-main) !important;
+      -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+      transition: background-color 5000s ease-in-out 0s;
     }
-    .header-title { font-size: 1.05rem; font-weight: 700; color: var(--accent-lime); display: flex; align-items: center; gap: 8px; }
-    .header-email { font-size: 0.78rem; color: var(--text-muted); word-break: break-all; margin-top: 2px; }
+
+    /* --- TOP HEADER --- */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .header-info { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+      font-size: 18px;
+    }
+    .brand-title { font-size: 17px; font-weight: 700; color: var(--primary); }
+    .brand-email { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .btn-admin {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+      padding: 8px 16px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .btn-admin:hover { background: var(--primary); color: var(--primary-text); }
+
+    /* --- CARDS & PANELS --- */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 22px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+    .card-subtitle { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+
+    /* --- ACTIVE SESSION PIPELINE STEPPER --- */
+    .pipeline-list { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .pipeline-step { display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 600; color: var(--text-muted); }
+    .pipeline-step.active { color: var(--primary); }
     
-    .admin-switch-btn {
-      background: rgba(163, 230, 53, 0.15); color: var(--accent-lime);
-      border: 1px solid var(--accent-lime); padding: 8px 12px; border-radius: 10px;
-      font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;
-      cursor: pointer; transition: 0.2s; white-space: nowrap; flex-shrink: 0;
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
     }
-    .admin-switch-btn:hover { background: var(--accent-lime); color: #000000; }
-
-    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
-    .card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #fff; }
-    .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
-
-    .auth-toggle-container {
-      display: flex; background: #09090b; border: 1px solid var(--card-border);
-      border-radius: 10px; padding: 4px; margin-bottom: 20px;
-    }
-    .auth-toggle-btn {
-      flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted);
-      font-weight: 600; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: 0.2s;
-    }
-    .auth-toggle-btn.active { background: var(--card-bg); color: var(--accent-lime); border: 1px solid var(--card-border); }
-
-    .pipeline-container { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; margin-bottom: 16px; position: relative; }
-    .pipeline-step { display: flex; align-items: center; gap: 12px; position: relative; font-size: 0.88rem; font-weight: 600; color: var(--text-muted); }
-    .pipeline-step.active { color: var(--accent-lime); }
-    .step-icon {
-      width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--card-border);
-      background: #09090b; display: flex; align-items: center; justify-content: center; z-index: 1; flex-shrink: 0;
-    }
-    .pipeline-step.active .step-icon { border-color: var(--accent-lime); background: rgba(163, 230, 53, 0.2); color: var(--accent-lime); }
-
-    .ticket-info-card {
-      background: rgba(9, 9, 11, 0.8); border: 1px solid var(--card-border);
-      border-radius: 12px; padding: 14px; margin-top: 10px; font-size: 0.85rem;
+    .pipeline-step.active .step-circle {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: var(--primary-text);
     }
 
-    .action-button-group { display: flex; gap: 10px; margin-top: 12px; }
-
-    .discord-box {
-      margin-top: 14px; padding: 16px; border-radius: 12px;
-      background: rgba(88, 101, 242, 0.12); border: 1px solid var(--discord-purple);
-      text-align: center;
+    /* Ticket Details Card Inside Pipeline */
+    .pipeline-ticket-box {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 20px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
+    .status-highlight { color: var(--primary); font-weight: 700; }
+    .status-highlight.cancelled { color: var(--danger); }
+    .status-highlight.offered { color: var(--warning); }
 
-    label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
-    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 16px; color: #ffffff; color-scheme: dark; }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
-
-    .turnstile-wrapper { margin-bottom: 16px; display: flex; justify-content: center; min-height: 65px; }
-
-    .btn { padding: 12px 18px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; width: 100%; text-decoration: none; }
-    .btn-lime { background: var(--accent-lime); color: #000000; }
-    .btn-lime:hover { background: var(--accent-lime-hover); }
-    .btn-discord { background: var(--discord-purple); color: #ffffff; }
-    .btn-discord:hover { background: var(--discord-purple-hover); }
-    .btn-danger { background: #ef4444; color: white; }
-
-    .chat-box { height: 280px; border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #000000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
-    .chat-msg.user { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; border-bottom-right-radius: 2px; }
-    .chat-msg.admin { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 2px; }
-
-    .mobile-bottom-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
-      background: #09090b; border-top: 1px solid var(--card-border);
-      z-index: 9999; display: flex; justify-content: space-around; align-items: center;
-      padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+    /* --- FORM CONTROLS --- */
+    label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; margin-top: 12px; }
+    input[type="text"], input[type="datetime-local"], textarea {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--text-main);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
     }
-    .nav-tab {
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      font-size: 0.68rem; color: var(--text-muted); gap: 3px; flex: 1; height: 100%;
-      cursor: pointer; transition: 0.2s; text-align: center;
+    input:focus, textarea:focus { border-color: var(--primary); }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      background: var(--primary);
+      color: var(--primary-text);
+      margin-top: 14px;
+      transition: opacity 0.2s;
     }
-    .nav-tab.active { color: var(--accent-lime); }
-    .nav-tab i { width: 20px; height: 20px; }
+    .btn:hover { opacity: 0.9; }
+    .btn-secondary { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); }
+    .btn-danger { background: var(--danger); color: #fff; }
 
-    .page { display: none; width: 100%; }
-    .page.active-page { display: block; animation: fadeIn 0.2s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    /* --- TAB VIEWS --- */
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
 
-    .footer { text-align: center; padding: 20px 0; font-size: 0.78rem; color: var(--text-muted); margin-top: 20px; }
-    .hidden { display: none !important; }
+    /* --- DIRECT MESSAGES support --- */
+    .chat-box {
+      background: var(--input-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      height: 300px;
+      overflow-y: auto;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4; }
+    .chat-bubble.user { background: var(--card-bg); border: 1px solid var(--card-border); align-self: flex-end; color: var(--text-main); }
+    .chat-bubble.admin { background: var(--primary); align-self: flex-start; color: var(--primary-text); font-weight: 600; }
+
+    /* --- BOTTOM FIXED NAVIGATION BAR --- */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 70px;
+      background: #08080b;
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 1000;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 20%;
+      transition: color 0.2s;
+    }
+    .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
+    .nav-item.active { color: var(--primary); }
+
+    .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
   </style>
 </head>
 <body>
 
-  <div class="ambient-glow"></div>
-  <div id="toastContainer"></div>
+<div class="container">
 
-  <!-- AUTH PAGE -->
-  <div id="authPage" class="main-container">
-    <div class="card" style="margin-top: 40px; text-align: center;">
-      <h2 style="color: var(--accent-lime); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        <i data-lucide="sparkles"></i> Drozo Mind Therapy
-      </h2>
-      <p class="card-desc">Sign in or create an account to schedule therapy sessions.</p>
-
-      <div class="auth-toggle-container">
-        <button type="button" class="auth-toggle-btn active" id="modeSigninBtn" onclick="switchAuthMode('signin')">Sign In</button>
-        <button type="button" class="auth-toggle-btn" id="modeSignupBtn" onclick="switchAuthMode('signup')">Register</button>
-      </div>
-      
-      <form id="authForm" onsubmit="handleAuth(event)">
-        <label style="text-align: left;">Email Address</label>
-        <input type="email" id="authEmail" placeholder="yourname@gmail.com" required>
-        
-        <label style="text-align: left;">Password</label>
-        <input type="password" id="authPassword" placeholder="••••••••" required>
-
-        <div class="turnstile-wrapper">
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess" data-theme="dark"></div>
-        </div>
-
-        <button type="submit" id="authSubmitBtn" class="btn btn-lime">
-          <i data-lucide="log-in" id="authBtnIcon"></i> <span id="authBtnText">Sign In</span>
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- CLIENT DASHBOARD -->
-  <div id="appPage" class="main-container hidden">
-    
-    <div class="user-header-card">
+  <!-- TOP HEADER -->
+  <header>
+    <div class="header-info">
+      <div class="brand-icon">💚</div>
       <div>
-        <div class="header-title"><i data-lucide="heart-pulse"></i> Drozo Mind Therapy</div>
-        <div class="header-email" id="userEmailDisplay">loading...</div>
-      </div>
-      <button id="adminPanelBtn" onclick="window.location.href='admin.html'" class="admin-switch-btn hidden">
-        <i data-lucide="shield"></i> Admin Panel
-      </button>
-    </div>
-
-    <!-- TAB 1: OVERVIEW -->
-    <div id="tabOverview" class="page active-page">
-      <div class="card">
-        <div class="card-title"><i data-lucide="sparkles" style="color: var(--accent-lime);"></i> Welcome to Drozo Mind Therapy</div>
-        <p class="card-desc">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</p>
-      </div>
-
-      <div class="card">
-        <div class="card-title"><i data-lucide="activity" style="color: var(--accent-lime);"></i> Active Session Pipeline</div>
-        <div id="pipelineDisplay" class="pipeline-container">
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Checking active tickets...</p>
-        </div>
+        <div class="brand-title">Drozo Mind Therapy</div>
+        <div class="brand-email" id="header-user-email">aviatorrudra@gmail.com</div>
       </div>
     </div>
+    <a href="admin.html" class="btn-admin">
+      🛡️ Admin Panel
+    </a>
+  </header>
 
-    <!-- TAB 2: BOOK SESSION -->
-    <div id="tabBook" class="page">
-      <div class="card">
-        <div class="card-title"><i data-lucide="calendar"></i> Book a Therapy Session</div>
-        <p class="card-desc">Select your preferred date and time. An administrator will review and confirm your slot.</p>
-        
-        <form onsubmit="submitTicket(event)">
-          <label>Preferred Date & Time</label>
-          <input type="datetime-local" id="prefTimeInput" required>
-
-          <label>Notes or Preferences (Optional)</label>
-          <textarea id="notesInput" rows="3" placeholder="Describe what you'd like to focus on..."></textarea>
-
-          <button type="submit" class="btn btn-lime"><i data-lucide="send"></i> Submit Session Request</button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 3: LIVE SUPPORT -->
-    <div id="tabSupport" class="page">
-      <div class="card">
-        <div class="card-title"><i data-lucide="message-square"></i> Live Support Chat</div>
-        <p class="card-desc">Direct line to Drozo Mind Therapy support for session help or inquiries.</p>
-        
-        <div class="chat-box" id="userChatContainer"></div>
-
-        <form onsubmit="sendUserMessage(event)" style="display: flex; gap: 8px;">
-          <input type="text" id="userChatMessageInput" placeholder="Type a message..." style="margin-bottom: 0;" required>
-          <button type="submit" class="btn btn-lime" style="width: auto;"><i data-lucide="send"></i></button>
-        </form>
-      </div>
-    </div>
-
-    <!-- TAB 4: SESSIONS HISTORY -->
-    <div id="tabSessions" class="page">
-      <div class="card">
-        <div class="card-title"><i data-lucide="history"></i> My Session History</div>
-        <div id="sessionHistoryList" style="display: flex; flex-direction: column; gap: 10px;">
-          <p style="color: var(--text-muted); font-size: 0.85rem;">Loading session records...</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 5: PROFILE -->
-    <div id="tabProfile" class="page">
-      <div class="card">
-        <div class="card-title"><i data-lucide="user"></i> Account Profile</div>
-        <div style="margin-bottom: 16px; font-size: 0.88rem;">
-          <p style="color: var(--text-muted); margin-bottom: 4px;">Email</p>
-          <strong id="profileEmailVal">...</strong>
-        </div>
-        <button onclick="handleSignOut()" class="btn btn-danger"><i data-lucide="log-out"></i> Sign Out</button>
-      </div>
-    </div>
-
-    <footer class="footer">
-      © 2026 The Drozo Mind-Therapy By Drozo. All rights reserved.
-    </footer>
-
+  <!-- AUTH / LOGIN MODAL (Shows if email is not logged in) -->
+  <div id="auth-modal" class="card" style="display: none;">
+    <div class="card-title">🔑 Account Access</div>
+    <p class="card-subtitle">Enter your email address to connect to your therapy portal.</p>
+    <label>Email Address</label>
+    <input type="text" id="login-email-input" placeholder="e.g. aviatorrudra@gmail.com">
+    <button class="btn" onclick="loginUser()">Sign In to Portal</button>
   </div>
 
-  <nav id="bottomNav" class="mobile-bottom-nav hidden">
-    <div class="nav-tab active" onclick="switchTab('tabOverview', this)"><i data-lucide="grid"></i><span>Overview</span></div>
-    <div class="nav-tab" onclick="switchTab('tabBook', this)"><i data-lucide="calendar"></i><span>Book</span></div>
-    <div class="nav-tab" onclick="switchTab('tabSupport', this)"><i data-lucide="message-square"></i><span>Support</span></div>
-    <div class="nav-tab" onclick="switchTab('tabSessions', this)"><i data-lucide="history"></i><span>Sessions</span></div>
-    <div class="nav-tab" onclick="switchTab('tabProfile', this)"><i data-lucide="user"></i><span>Profile</span></div>
+  <!-- MAIN TAB CONTENT VIEWS -->
+  <main id="portal-body">
+
+    <!-- 1. OVERVIEW TAB -->
+    <div id="view-overview" class="tab-view active">
+      <!-- Welcome Banner -->
+      <div class="card">
+        <div class="card-title">
+          <span style="color: var(--primary);">✨</span> Welcome to Drozo Mind Therapy
+        </div>
+        <div class="card-subtitle">
+          Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.
+        </div>
+      </div>
+
+      <!-- Active Session Pipeline -->
+      <div class="card">
+        <div class="card-title">
+          <span style="color: var(--primary);">📈</span> Active Session Pipeline
+        </div>
+
+        <div class="pipeline-list">
+          <div class="pipeline-step" id="step-1">
+            <div class="step-circle" id="circle-1">1</div>
+            <span>1. Submitted</span>
+          </div>
+
+          <div class="pipeline-step" id="step-2">
+            <div class="step-circle" id="circle-2">2</div>
+            <span>2. Slot Offered</span>
+          </div>
+
+          <div class="pipeline-step" id="step-3">
+            <div class="step-circle" id="circle-3">3</div>
+            <span>3. Accepted & Scheduled</span>
+          </div>
+
+          <div class="pipeline-step" id="step-4">
+            <div class="step-circle" id="circle-4">4</div>
+            <span>4. Confirmed</span>
+          </div>
+        </div>
+
+        <!-- Active Ticket Detail Box -->
+        <div id="pipeline-active-card" class="pipeline-ticket-box">
+          <div class="empty-state">No active booking found. Tap <strong>Book</strong> below to schedule a session.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BOOK SESSION TAB -->
+    <div id="view-book" class="tab-view">
+      <div class="card">
+        <div class="card-title">📅 Schedule a Session</div>
+        <p class="card-subtitle">Select your preferred date and time for your therapy appointment.</p>
+        
+        <label>Preferred Date & Time</label>
+        <input type="datetime-local" id="book-datetime">
+
+        <label>Session Notes / Focus Area (Optional)</label>
+        <textarea id="book-notes" rows="3" placeholder="Describe what you'd like to discuss..."></textarea>
+
+        <button class="btn" onclick="submitBooking()">Submit Booking Request</button>
+      </div>
+    </div>
+
+    <!-- 3. SUPPORT / DM TAB -->
+    <div id="view-support" class="tab-view">
+      <div class="card">
+        <div class="card-title">💬 Direct Support</div>
+        <p class="card-subtitle">Chat directly with your therapist or session administrator.</p>
+
+        <div class="chat-box" id="chat-messages-container">
+          <div class="empty-state">No messages exchanged yet.</div>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <input type="text" id="chat-user-input" placeholder="Type a message..." style="margin-bottom:0;">
+          <button class="btn" style="width: 110px; margin-top:0;" onclick="sendChatMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. SESSIONS HISTORY TAB -->
+    <div id="view-sessions" class="tab-view">
+      <div class="card">
+        <div class="card-title">🕒 Session History</div>
+        <p class="card-subtitle">View all past and present booking records.</p>
+        <div id="sessions-history-list" style="margin-top: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div class="empty-state">Loading booking history...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. PROFILE TAB -->
+    <div id="view-profile" class="tab-view">
+      <div class="card">
+        <div class="card-title">👤 User Profile</div>
+        <label>Registered Email</label>
+        <input type="text" id="profile-email-display" readonly style="opacity: 0.8;">
+
+        <label>User ID</label>
+        <input type="text" id="profile-id-display" readonly style="font-family: monospace; opacity: 0.6;">
+
+        <button class="btn btn-danger" style="margin-top: 20px;" onclick="logoutUser()">Switch / Logout Account</button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BOTTOM FIXED NAVIGATION BAR -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchNavTab('overview', this)">
+      <svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
+      Overview
+    </button>
+    <button class="nav-item" onclick="switchNavTab('book', this)">
+      <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
+      Book
+    </button>
+    <button class="nav-item" onclick="switchNavTab('support', this)">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
+      Support
+    </button>
+    <button class="nav-item" onclick="switchNavTab('sessions', this)">
+      <svg viewBox="0 0 24 24"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+      Sessions
+    </button>
+    <button class="nav-item" onclick="switchNavTab('profile', this)">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      Profile
+    </button>
   </nav>
 
-  <script>
-    const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
-    const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</div>
 
-    const DISCORD_INVITE_URL = "https://discord.com/invite/ChmhSPy6RR";
+<script>
+  // --- 1. SUPABASE CLIENT SETUP ---
+  const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
 
-    let currentUser = null;
-    let turnstileToken = null;
-    let currentAuthMode = 'signin';
+  const { createClient } = window.supabase;
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    window.onTurnstileSuccess = function(token) {
-      turnstileToken = token;
-    };
+  let currentUserId = null;
+  let currentUserEmail = localStorage.getItem('drozo_client_email') || 'aviatorrudra@gmail.com';
+  let myTickets = [];
 
-    function showToast(message, type = 'success') {
-      const container = document.getElementById('toastContainer');
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}"></i> <span>${message}</span>`;
-      container.appendChild(toast);
-      lucide.createIcons();
-      setTimeout(() => toast.classList.add('show'), 10);
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-      }, 4000);
+  // --- 2. INITIALIZATION & AUTH ---
+  async function init() {
+    if (!currentUserEmail) {
+      document.getElementById('auth-modal').style.display = 'block';
+      document.getElementById('portal-body').style.display = 'none';
+      return;
     }
 
-    function switchAuthMode(mode) {
-      currentAuthMode = mode;
-      const signinBtn = document.getElementById('modeSigninBtn');
-      const signupBtn = document.getElementById('modeSignupBtn');
-      const btnText = document.getElementById('authBtnText');
+    document.getElementById('header-user-email').innerText = currentUserEmail;
+    document.getElementById('profile-email-display').value = currentUserEmail;
 
-      if (mode === 'signin') {
-        signinBtn.classList.add('active');
-        signupBtn.classList.remove('active');
-        btnText.innerText = 'Sign In';
-      } else {
-        signupBtn.classList.add('active');
-        signinBtn.classList.remove('active');
-        btnText.innerText = 'Register Account';
-      }
-      if (window.turnstile) turnstile.reset();
-      turnstileToken = null;
-    }
+    // Check / Fetch User Profile ID from Supabase
+    let { data: profile } = await supabaseClient.from('profiles').select('*').eq('email', currentUserEmail).single();
 
-    async function syncUserProfile() {
-      if (!currentUser) return;
-      await supabaseClient.from('profiles').upsert({
-        id: currentUser.id,
-        email: currentUser.email
-      }, { onConflict: 'id' });
-    }
-
-    async function init() {
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (!session) {
-        document.getElementById('authPage').classList.remove('hidden');
-        document.getElementById('appPage').classList.add('hidden');
-        document.getElementById('bottomNav').classList.add('hidden');
-      } else {
-        currentUser = session.user;
-        await syncUserProfile();
-
-        document.getElementById('authPage').classList.add('hidden');
-        document.getElementById('appPage').classList.remove('hidden');
-        document.getElementById('bottomNav').classList.remove('hidden');
-
-        document.getElementById('userEmailDisplay').innerText = currentUser.email;
-        document.getElementById('profileEmailVal').innerText = currentUser.email;
-
-        checkAdminStatus();
-        fetchUserTickets();
-        fetchChatMessages();
-        setupRealtime();
-      }
-      lucide.createIcons();
-    }
-
-    async function checkAdminStatus() {
-      const { data: profile } = await supabaseClient
+    if (!profile) {
+      const { data: newProfile, error } = await supabaseClient
         .from('profiles')
-        .select('role')
-        .eq('id', currentUser.id)
+        .insert([{ email: currentUserEmail, role: 'user' }])
+        .select()
         .single();
-
-      if (profile && profile.role === 'admin') {
-        const adminBtn = document.getElementById('adminPanelBtn');
-        if (adminBtn) adminBtn.classList.remove('hidden');
-      }
-    }
-
-    async function handleAuth(e) {
-      e.preventDefault();
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value;
-
-      if (!turnstileToken) {
-        showToast("Please complete the CAPTCHA verification to proceed.", "error");
+      
+      if (error) {
+        alert("Login Error: " + error.message);
         return;
       }
+      profile = newProfile;
+    }
 
-      const activeToken = turnstileToken;
-      turnstileToken = null;
+    currentUserId = profile.id;
+    document.getElementById('profile-id-display').value = currentUserId;
 
-      if (currentAuthMode === 'signin') {
-        const { error } = await supabaseClient.auth.signInWithPassword({ 
-          email, 
-          password,
-          options: { captchaToken: activeToken }
-        });
+    await loadMyTickets();
+    await loadChatMessages();
+    subscribeRealtime();
+  }
 
-        if (error) {
-          showToast(error.message, 'error');
-          if (window.turnstile) turnstile.reset();
-        } else {
-          showToast("Signed in successfully!");
-          init();
-        }
-      } else {
-        const { error } = await supabaseClient.auth.signUp({ 
-          email, 
-          password,
-          options: { captchaToken: activeToken }
-        });
+  function loginUser() {
+    const email = document.getElementById('login-email-input').value.trim();
+    if (!email) return alert("Please enter an email.");
+    localStorage.setItem('drozo_client_email', email);
+    currentUserEmail = email;
+    location.reload();
+  }
 
-        if (error) {
-          showToast(error.message, 'error');
-          if (window.turnstile) turnstile.reset();
-        } else {
-          showToast("Account created successfully! Logging you in...");
-          init();
-        }
+  function logoutUser() {
+    localStorage.removeItem('drozo_client_email');
+    location.reload();
+  }
+
+  // --- 3. BOTTOM TAB NAVIGATION ---
+  function switchNavTab(tabName, btnEl) {
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+
+    btnEl.classList.add('active');
+    document.getElementById(`view-${tabName}`).classList.add('active');
+  }
+
+  // --- 4. TIME FORMATTING ---
+  function formatInputTime(rawDatetime) {
+    if (!rawDatetime) return null;
+    const d = new Date(rawDatetime);
+    return d.toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
+  }
+
+  // --- 5. TICKET MANAGEMENT & PIPELINE UPDATES ---
+  async function loadMyTickets() {
+    const { data: tickets, error } = await supabaseClient
+      .from('tickets')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: false });
+
+    if (error) return;
+    myTickets = tickets || [];
+
+    renderActivePipeline();
+    renderHistorySessions();
+  }
+
+  function renderActivePipeline() {
+    const pipelineContainer = document.getElementById('pipeline-active-card');
+    
+    // Reset Stepper CSS
+    for (let i = 1; i <= 4; i++) {
+      const step = document.getElementById(`step-${i}`);
+      const circle = document.getElementById(`circle-${i}`);
+      step.classList.remove('active');
+      circle.innerText = i;
+    }
+
+    if (myTickets.length === 0) {
+      pipelineContainer.innerHTML = `<div class="empty-state">No active booking. Tap <strong>Book</strong> below to schedule a session.</div>`;
+      return;
+    }
+
+    const latestTicket = myTickets[0]; // Most recent ticket
+    const status = latestTicket.status || 'Submitted';
+
+    // Map status to Stepper Step
+    let stepNum = 1;
+    if (status === 'Slot Offered') stepNum = 2;
+    else if (status === 'Accepted' || status === 'Scheduled') stepNum = 3;
+    else if (status === 'Confirmed') stepNum = 4;
+
+    // Highlight active pipeline steps
+    for (let i = 1; i <= stepNum; i++) {
+      const step = document.getElementById(`step-${i}`);
+      const circle = document.getElementById(`circle-${i}`);
+      step.classList.add('active');
+      if (i < stepNum || status === 'Confirmed') {
+        circle.innerText = '✓';
       }
     }
 
-    async function handleSignOut() {
-      await supabaseClient.auth.signOut();
-      window.location.reload();
-    }
+    // Determine status text CSS class
+    let statusClass = 'status-highlight';
+    if (status === 'Cancelled') statusClass = 'status-highlight cancelled';
+    else if (status === 'Slot Offered') statusClass = 'status-highlight offered';
 
-    function switchTab(tabId, tabElement) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-      document.getElementById(tabId).classList.add('active-page');
+    // Render Active Card
+    pipelineContainer.innerHTML = `
+      <div><strong>Ticket Ref:</strong> TCK-${latestTicket.ticket_number}</div>
+      <div><strong>Status:</strong> <span class="${statusClass}">${status}</span></div>
+      ${latestTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${latestTicket.pref_time}</div>` : ''}
+      ${latestTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${latestTicket.offered_time}</div>` : ''}
+      ${latestTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${latestTicket.accepted_time}</div>` : ''}
+      ${latestTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${latestTicket.admin_comment}</em></div>` : ''}
+      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Negotiation Attempt: ${latestTicket.negotiation_count || 0}/2</div>
 
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      if (tabElement) tabElement.classList.add('active');
-
-      window.scrollTo(0, 0);
-      lucide.createIcons();
-    }
-
-    async function acceptTimeSlot(ticketId) {
-      const { error } = await supabaseClient
-        .from('tickets')
-        .update({ status: 'Time Slot Offered and Accepted' })
-        .eq('id', ticketId);
-
-      if (error) {
-        showToast(error.message, 'error');
-      } else {
-        showToast("Time slot accepted! Awaiting final confirmation.");
-        fetchUserTickets();
-      }
-    }
-
-    async function rejectTimeSlot(ticketId) {
-      const { error } = await supabaseClient
-        .from('tickets')
-        .update({ status: 'Time Slot Rejected - Ask new slot' })
-        .eq('id', ticketId);
-
-      if (error) {
-        showToast(error.message, 'error');
-      } else {
-        showToast("Time slot rejected. Support/Admin will review your request.");
-        fetchUserTickets();
-      }
-    }
-
-    async function fetchUserTickets() {
-      const { data: tickets } = await supabaseClient
-        .from('tickets')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: false });
-
-      const pipelineContainer = document.getElementById('pipelineDisplay');
-      const historyList = document.getElementById('sessionHistoryList');
-
-      if (!tickets || tickets.length === 0) {
-        pipelineContainer.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">No active therapy bookings. Tap "Book" below to start!</p>`;
-        historyList.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">No previous sessions recorded.</p>`;
-        return;
-      }
-
-      const activeTicket = tickets[0];
-      
-      const statusStepMap = { 
-        'Submitted': 1, 
-        'Time Slot Offered': 2, 
-        'Time Slot Rejected - Ask new slot': 2, 
-        'Time Slot Offered and Accepted': 3,
-        'Scheduled': 3, 
-        'Confirmed': 4, 
-        'Closed': 4 
-      };
-      
-      const currentStep = statusStepMap[activeTicket.status] || 1;
-      const isConfirmedOrScheduled = (activeTicket.status === 'Confirmed' || activeTicket.status === 'Scheduled' || activeTicket.status === 'Closed');
-
-      const discordBlock = `
-        <div class="discord-box">
-          <p style="font-weight: 700; color: #fff; margin-bottom: 6px; font-size: 0.88rem;">🎉 Session Confirmed & Scheduled!</p>
-          <p style="color: var(--text-muted); font-size: 0.78rem; margin-bottom: 12px;">Join our official Discord server to attend your live session.</p>
-          <a href="${DISCORD_INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-discord">
-            <i data-lucide="message-square"></i> Join Discord Server
-          </a>
+      <!-- Action Panel when Admin Offers New Slot -->
+      ${status === 'Slot Offered' ? `
+        <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; margin-top: 12px;">
+          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${latestTicket.offered_time}).</p>
+          <button class="btn" style="margin-top:0; margin-bottom:10px;" onclick="acceptOfferedSlot('${latestTicket.id}', '${latestTicket.offered_time}')">Accept Proposed Slot</button>
+          
+          <label>Or Counter-Propose Another Time:</label>
+          <input type="datetime-local" id="counter-time-input">
+          
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-secondary" style="margin-top:0;" onclick="proposeNewTime('${latestTicket.id}', ${latestTicket.negotiation_count || 0})">Submit Time</button>
+            <button class="btn btn-danger" style="margin-top:0;" onclick="cancelTicket('${latestTicket.id}')">Cancel</button>
+          </div>
         </div>
+      ` : ''}
+    `;
+  }
+
+  function renderHistorySessions() {
+    const list = document.getElementById('sessions-history-list');
+    list.innerHTML = '';
+
+    if (myTickets.length === 0) {
+      list.innerHTML = `<div class="empty-state">No booking history recorded.</div>`;
+      return;
+    }
+
+    myTickets.forEach(t => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--input-bg); border:1px solid var(--card-border); padding:14px; border-radius:10px; font-size:13px;';
+      card.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <strong>Ticket #TCK-${t.ticket_number}</strong>
+          <span class="status-highlight">${t.status}</span>
+        </div>
+        <div>Date/Time: ${t.accepted_time || t.offered_time || t.pref_time || 'N/A'}</div>
       `;
+      list.appendChild(card);
+    });
+  }
 
-      let slotActions = '';
-      if (activeTicket.status === 'Time Slot Offered') {
-        slotActions = `
-          <div class="action-button-group">
-            <button onclick="acceptTimeSlot('${activeTicket.id}')" class="btn btn-lime" style="flex:1;">
-              <i data-lucide="check"></i> Accept Slot
-            </button>
-            <button onclick="rejectTimeSlot('${activeTicket.id}')" class="btn btn-danger" style="flex:1;">
-              <i data-lucide="x"></i> Reject & Ask New Slot
-            </button>
-          </div>
-        `;
-      }
+  // --- 6. USER ACTION HANDLERS ---
+  async function submitBooking() {
+    const rawTime = document.getElementById('book-datetime').value;
+    const notes = document.getElementById('book-notes').value.trim();
 
-      pipelineContainer.innerHTML = `
-        <div class="pipeline-step ${currentStep >= 1 ? 'active' : ''}">
-          <div class="step-icon"><i data-lucide="${currentStep >= 1 ? 'check' : 'circle'}"></i></div>
-          <span>1. Submitted</span>
-        </div>
-        <div class="pipeline-step ${currentStep >= 2 ? 'active' : ''}">
-          <div class="step-icon"><i data-lucide="${currentStep >= 2 ? 'check' : 'circle'}"></i></div>
-          <span>2. Slot Offered</span>
-        </div>
-        <div class="pipeline-step ${currentStep >= 3 ? 'active' : ''}">
-          <div class="step-icon"><i data-lucide="${currentStep >= 3 ? 'check' : 'circle'}"></i></div>
-          <span>3. Accepted & Scheduled</span>
-        </div>
-        <div class="pipeline-step ${currentStep >= 4 ? 'active' : ''}">
-          <div class="step-icon"><i data-lucide="${currentStep >= 4 ? 'check' : 'circle'}"></i></div>
-          <span>4. ${activeTicket.status === 'Closed' ? 'Closed' : 'Confirmed'}</span>
-        </div>
+    if (!rawTime) return alert("Please select a date and time.");
 
-        <div class="ticket-info-card">
-          <p><strong>Ticket Ref:</strong> ${activeTicket.ticket_number}</p>
-          <p><strong>Status:</strong> <span style="color: var(--accent-lime);">${activeTicket.status}</span></p>
-          <p style="margin-top: 4px; color: var(--text-muted);">
-            Offered Slot: ${activeTicket.pref_time ? new Date(activeTicket.pref_time).toLocaleString() : 'Pending'}
-          </p>
-          ${slotActions}
-        </div>
+    const formattedTime = formatInputTime(rawTime);
+    const ticketNum = Math.floor(100000 + Math.random() * 900000);
 
-        ${isConfirmedOrScheduled ? discordBlock : ''}
-      `;
+    const { error } = await supabaseClient.from('tickets').insert([{
+      ticket_number: ticketNum,
+      user_id: currentUserId,
+      pref_time: formattedTime,
+      notes: notes,
+      status: 'Submitted',
+      negotiation_count: 0
+    }]);
 
-      historyList.innerHTML = tickets.map(t => `
-        <div style="background: #09090b; border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; font-size: 0.85rem;">
-          <div style="display: flex; justify-content: space-between;">
-            <strong>${t.ticket_number}</strong>
-            <span style="color: var(--accent-lime);">${t.status}</span>
-          </div>
-          <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.8rem;">
-            ${new Date(t.created_at).toLocaleDateString()}
-          </p>
-        </div>
-      `).join('');
+    if (error) alert("Error: " + error.message);
+    else {
+      alert("Session requested successfully!");
+      document.getElementById('book-datetime').value = '';
+      document.getElementById('book-notes').value = '';
+      
+      // Switch back to Overview tab
+      switchNavTab('overview', document.querySelectorAll('.nav-item')[0]);
+      loadMyTickets();
+    }
+  }
 
-      lucide.createIcons();
+  async function acceptOfferedSlot(ticketId, offeredTime) {
+    await supabaseClient.from('tickets').update({
+      status: 'Accepted',
+      accepted_time: offeredTime
+    }).eq('id', ticketId);
+    loadMyTickets();
+  }
+
+  async function proposeNewTime(ticketId, currentCount) {
+    const rawVal = document.getElementById('counter-time-input').value;
+    if (!rawVal) return alert("Select a date and time first.");
+
+    const newCount = currentCount + 1;
+
+    // AUTO-CANCEL RULE: Maximum 2 negotiation changes
+    if (newCount >= 2) {
+      await supabaseClient.from('tickets').update({
+        status: 'Cancelled',
+        admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (2 attempts).',
+        negotiation_count: newCount
+      }).eq('id', ticketId);
+      
+      alert("Session cancelled automatically because the maximum limit of 2 time adjustments was reached.");
+    } else {
+      const formatted = formatInputTime(rawVal);
+      await supabaseClient.from('tickets').update({
+        status: 'Submitted',
+        pref_time: formatted,
+        offered_time: null,
+        negotiation_count: newCount
+      }).eq('id', ticketId);
+
+      alert("New proposed time submitted to Admin for review.");
     }
 
-    async function submitTicket(e) {
-      e.preventDefault();
-      const prefTime = document.getElementById('prefTimeInput').value;
-      const notes = document.getElementById('notesInput').value;
-      const ticketNum = 'TCK-' + Math.floor(100000 + Math.random() * 900000);
+    loadMyTickets();
+  }
 
-      const { error } = await supabaseClient.from('tickets').insert([{
-        ticket_number: ticketNum,
-        user_id: currentUser.id,
-        pref_time: new Date(prefTime).toISOString(),
-        notes: notes,
-        status: 'Submitted'
-      }]);
+  async function cancelTicket(ticketId) {
+    await supabaseClient.from('tickets').update({
+      status: 'Cancelled',
+      admin_comment: 'Cancelled by client.'
+    }).eq('id', ticketId);
+    loadMyTickets();
+  }
 
-      if (error) showToast(error.message, 'error');
-      else {
-        showToast("Session ticket requested!");
-        fetchUserTickets();
-        switchTab('tabOverview', document.querySelectorAll('.nav-tab')[0]);
-      }
+  // --- 7. DIRECT MESSAGING SUPPORT ---
+  async function loadChatMessages() {
+    const { data: msgs } = await supabaseClient
+      .from('chat_messages')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: true });
+
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = '';
+
+    if (!msgs || msgs.length === 0) {
+      container.innerHTML = `<div class="empty-state">No messages exchanged yet.</div>`;
+      return;
     }
 
-    async function fetchChatMessages() {
-      const { data: messages } = await supabaseClient
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('created_at', { ascending: true });
+    msgs.forEach(m => {
+      const bubble = document.createElement('div');
+      const isAdmin = m.sender_role === 'admin';
+      bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'user'}`;
+      bubble.innerText = m.message;
+      container.appendChild(bubble);
+    });
 
-      const box = document.getElementById('userChatContainer');
-      if (messages && messages.length > 0) {
-        box.innerHTML = messages.map(m => `
-          <div class="chat-msg ${m.sender_role === 'admin' ? 'admin' : 'user'}">
-            ${m.message}
-          </div>
-        `).join('');
-      } else {
-        box.innerHTML = `<p style="color: var(--text-muted); text-align: center; font-size: 0.85rem;">Send a message to speak with support.</p>`;
-      }
-      box.scrollTop = box.scrollHeight;
-    }
+    container.scrollTop = container.scrollHeight;
+  }
 
-    async function sendUserMessage(e) {
-      e.preventDefault();
-      const input = document.getElementById('userChatMessageInput');
-      if (!input.value) return;
+  async function sendChatMessage() {
+    const input = document.getElementById('chat-user-input');
+    const msg = input.value.trim();
+    if (!msg) return;
 
-      await supabaseClient.from('chat_messages').insert([{
-        user_id: currentUser.id,
-        sender_role: 'user',
-        message: input.value,
-        status: 'pending'
-      }]);
+    await supabaseClient.from('chat_messages').insert([{
+      user_id: currentUserId,
+      sender_role: 'user',
+      message: msg,
+      status: 'unread'
+    }]);
 
-      input.value = '';
-      fetchChatMessages();
-    }
+    input.value = '';
+    loadChatMessages();
+  }
 
-    // REAL-TIME WEBSOCKET LISTENERS
-    function setupRealtime() {
-      supabaseClient
-        .channel('client-realtime-tickets')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
-          fetchUserTickets();
-          showToast("Booking status updated automatically!", "success");
-        })
-        .subscribe();
+  // --- 8. REALTIME WEBSOCKET SUBSCRIPTIONS ---
+  function subscribeRealtime() {
+    supabaseClient
+      .channel('client-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadMyTickets())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadChatMessages())
+      .subscribe();
+  }
 
-      supabaseClient
-        .channel('client-realtime-chats')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
-          fetchChatMessages();
-        })
-        .subscribe();
-    }
+  init();
+</script>
 
-    init();
-  </script>
 </body>
 </html>
