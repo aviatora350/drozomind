@@ -820,7 +820,6 @@
     loadMyTickets();
   }
 
-  // CLIENT COUNTER-PROPOSE: Exclusively increments the counter and evaluates limits
   async function proposeNewTime(ticketId, currentCount) {
     const rawVal = document.getElementById('counter-time-input').value;
     if (!rawVal) return alert("Select date and time first.");
@@ -831,7 +830,6 @@
     const isoTime = dateObj.toISOString();
     const newCount = (currentCount || 0) + 1;
 
-    // STEP 5 / HARD STOP: Auto-cancel on 3rd client attempt
     if (newCount >= 3) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
@@ -843,14 +841,12 @@
       return;
     }
 
-    // STEP 3 / WARNING: Show warning banner modal on 2nd client attempt
     if (newCount === 2) {
       pendingNegotiation = { ticketId, isoTime, newCount };
       document.getElementById('negotiation-warning-modal').style.display = 'flex';
       return;
     }
 
-    // STEP 1 / FIRST COUNTER
     await executeProposal(ticketId, isoTime, newCount);
   }
 
