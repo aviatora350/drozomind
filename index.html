@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drozo Mind - Therapy - Client Portal</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Cloudflare Turnstile API -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root {
@@ -276,7 +275,7 @@
       <input type="email" id="auth-email" placeholder="name@example.com">
 
       <label>Password</label>
-      <input type="password" id="auth-password" placeholder="••••••••">
+      <input type="password" id="auth-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') handleAuthSubmit()">
 
       <div style="margin-top: 16px; display: flex; justify-content: center;">
         <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess"></div>
@@ -300,7 +299,6 @@
         <div class="brand-email" id="header-user-email">Loading...</div>
       </div>
     </div>
-    <!-- Admin Button hidden by default; revealed only for admin accounts -->
     <a href="admin.html" id="btn-admin-header" class="btn-admin">🛡️ Admin Panel</a>
   </header>
 
@@ -365,7 +363,7 @@
         </div>
 
         <div style="display: flex; gap: 10px;">
-          <input type="text" id="chat-user-input" placeholder="Type a message..." style="margin-bottom:0;">
+          <input type="text" id="chat-user-input" placeholder="Type a message..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter') sendChatMessage()">
           <button class="btn" style="width: 110px; margin-top:0;" onclick="sendChatMessage()">Send</button>
         </div>
       </div>
@@ -450,7 +448,6 @@
     document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
   }
 
-  // Timezone Helper: Converts ISO UTC string to user's local timezone display
   function formatLocalDateTime(isoString) {
     if (!isoString) return 'N/A';
     const date = new Date(isoString);
@@ -474,7 +471,7 @@
         role: assignedRole
       }]);
     } else {
-      await supabaseClient.from('profiles').update({ email: userEmail }).eq('id', userId);
+      await supabaseClient.from('profiles').update({ email: userEmail, role: assignedRole }).eq('id', userId);
     }
   }
 
@@ -764,7 +761,10 @@
     if (!rawTime) return alert("Please select a date and time.");
     if (!discordUsername) return alert("Please enter your Discord username.");
 
-    const isoTime = new Date(rawTime).toISOString();
+    const dateObj = new Date(rawTime);
+    if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
+
+    const isoTime = dateObj.toISOString();
     const ticketNum = Math.floor(100000 + Math.random() * 900000);
 
     const { error } = await supabaseClient.from('tickets').insert([{
@@ -796,6 +796,9 @@
     const rawVal = document.getElementById('counter-time-input').value;
     if (!rawVal) return alert("Select date and time.");
 
+    const dateObj = new Date(rawVal);
+    if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
+
     const newCount = currentCount + 1;
     if (newCount >= 2) {
       await supabaseClient.from('tickets').update({
@@ -805,7 +808,7 @@
       }).eq('id', ticketId);
       alert("Session cancelled automatically because maximum negotiation attempts were reached.");
     } else {
-      const isoTime = new Date(rawVal).toISOString();
+      const isoTime = dateObj.toISOString();
       await supabaseClient.from('tickets').update({
         status: 'Submitted',
         pref_time: isoTime,
