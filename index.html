@@ -879,7 +879,6 @@
       sendBtn.disabled = true;
       input.value = '';
 
-      // User sending a message flags status as 'unread' for Admin to read
       const { error } = await supabaseClient.from('chat_messages').insert([{
         user_id: currentUserId,
         sender_role: 'user',
@@ -915,7 +914,6 @@
 
     if (!currentUserId) return;
 
-    // Dot strictly appears ONLY if an ADMIN sent a message and status is 'unread'
     const { data: unread } = await supabaseClient
       .from('chat_messages')
       .select('id')
