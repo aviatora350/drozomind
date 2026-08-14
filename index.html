@@ -80,7 +80,7 @@
     }
 
     .btn-admin {
-      display: flex; align-items: center; gap: 6px;
+      display: none; align-items: center; gap: 6px;
       background: transparent; color: var(--primary);
       border: 1px solid var(--primary); padding: 8px 16px;
       border-radius: 12px; text-decoration: none; font-size: 13px; font-weight: 600;
@@ -300,7 +300,8 @@
         <div class="brand-email" id="header-user-email">Loading...</div>
       </div>
     </div>
-    <a href="admin.html" class="btn-admin">🛡️ Admin Panel</a>
+    <!-- Admin Button hidden by default; revealed only for admin accounts -->
+    <a href="admin.html" id="btn-admin-header" class="btn-admin">🛡️ Admin Panel</a>
   </header>
 
   <div id="cancellation-alert-container"></div>
@@ -430,7 +431,6 @@
 <script>
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-  const DISCORD_INVITE_URL = "https://discord.gg/SaJMRJr4Y8";
 
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -478,6 +478,26 @@
     }
   }
 
+  async function checkAdminRolePermission() {
+    const adminHeaderBtn = document.getElementById('btn-admin-header');
+    if (!currentUserId) {
+      adminHeaderBtn.style.display = 'none';
+      return;
+    }
+
+    const { data: profile } = await supabaseClient
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUserId)
+      .maybeSingle();
+
+    if (profile && profile.role === 'admin') {
+      adminHeaderBtn.style.display = 'inline-flex';
+    } else {
+      adminHeaderBtn.style.display = 'none';
+    }
+  }
+
   async function handleAuthSubmit() {
     const email = document.getElementById('auth-email').value.trim();
     const password = document.getElementById('auth-password').value.trim();
@@ -513,6 +533,7 @@
     currentUserEmail = session.user.email;
 
     await syncUserProfile(currentUserId, currentUserEmail);
+    await checkAdminRolePermission();
 
     document.getElementById('header-user-email').innerText = currentUserEmail;
     document.getElementById('profile-email-display').value = currentUserEmail;
@@ -654,10 +675,16 @@
       ${(status === 'Accepted' || status === 'Confirmed') ? `
         <div class="discord-card">
           <div style="font-size: 15px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">🎉 Session Confirmed & Ready!</div>
-          <p style="font-size: 13px; color: var(--text-muted); line-height:1.4;">Your slot is locked for <strong>${formatLocalDateTime(activeTicket.accepted_time || activeTicket.offered_time)}</strong>. Join the official Discord voice channel to meet your therapist.</p>
-          <button id="discord-join-btn" class="discord-btn" onclick="connectToDiscordServer()">
-            <span>💬 Connect to Discord Session</span>
-          </button>
+          <p style="font-size: 13px; color: var(--text-muted); line-height:1.4;">
+            Your slot is locked for <strong>${formatLocalDateTime(activeTicket.accepted_time || activeTicket.offered_time)}</strong>. Click below to join via your 1-time session link.
+          </p>
+          ${activeTicket.discord_link ? `
+            <button id="discord-join-btn" class="discord-btn" onclick="connectToDiscordServer('${activeTicket.discord_link}')">
+              <span>💬 Connect to Discord Session</span>
+            </button>
+          ` : `
+            <p style="color: var(--warning); margin-top: 8px; font-weight: 600;">Waiting for administrator to send session invite link...</p>
+          `}
         </div>
       ` : ''}
 
@@ -678,7 +705,8 @@
     `;
   }
 
-  function connectToDiscordServer() {
+  function connectToDiscordServer(targetUrl) {
+    if (!targetUrl) return alert("Discord link is missing or invalid.");
     const btn = document.getElementById('discord-join-btn');
     if (!btn) return;
 
@@ -691,7 +719,7 @@
       btn.style.background = '#22c55e';
       
       setTimeout(() => {
-        window.open(DISCORD_INVITE_URL, "_blank");
+        window.open(targetUrl, "_blank");
         btn.disabled = false;
         btn.innerHTML = `💬 Connect to Discord Session`;
         btn.style.background = 'var(--discord-purple)';
