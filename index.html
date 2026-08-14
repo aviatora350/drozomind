@@ -11,6 +11,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Cloudflare Turnstile API Script -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
     :root {
@@ -72,6 +75,17 @@
     .card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #fff; }
     .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
 
+    /* AUTH TOGGLE TABS */
+    .auth-toggle-container {
+      display: flex; background: #09090b; border: 1px solid var(--card-border);
+      border-radius: 10px; padding: 4px; margin-bottom: 20px;
+    }
+    .auth-toggle-btn {
+      flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted);
+      font-weight: 600; font-size: 0.85rem; border-radius: 8px; cursor: pointer; transition: 0.2s;
+    }
+    .auth-toggle-btn.active { background: var(--card-bg); color: var(--accent-lime); border: 1px solid var(--card-border); }
+
     .pipeline-container { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; margin-bottom: 16px; position: relative; }
     .pipeline-step { display: flex; align-items: center; gap: 12px; position: relative; font-size: 0.88rem; font-weight: 600; color: var(--text-muted); }
     .pipeline-step.active { color: var(--accent-lime); }
@@ -96,6 +110,13 @@
     input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 16px; color: #ffffff; color-scheme: dark; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
 
+    .turnstile-wrapper {
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: center;
+      min-height: 65px;
+    }
+
     .btn { padding: 12px 18px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; width: 100%; text-decoration: none; }
     .btn-lime { background: var(--accent-lime); color: #000000; }
     .btn-lime:hover { background: var(--accent-lime-hover); }
@@ -111,7 +132,7 @@
     .mobile-bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
       background: #09090b; border-top: 1px solid var(--card-border);
-      z-index: 9999; display: flex; justify-space-around: align-items: center;
+      z-index: 9999; display: flex; justify-around: align-items: center;
       padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
     }
     .nav-tab {
@@ -141,7 +162,13 @@
       <h2 style="color: var(--accent-lime); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
         <i data-lucide="sparkles"></i> Drozo Mind Therapy
       </h2>
-      <p class="card-desc">Sign in or register to schedule and manage your therapy sessions.</p>
+      <p class="card-desc">Sign in or create an account to schedule therapy sessions.</p>
+
+      <!-- Auth Mode Switcher -->
+      <div class="auth-toggle-container">
+        <button type="button" class="auth-toggle-btn active" id="modeSigninBtn" onclick="switchAuthMode('signin')">Sign In</button>
+        <button type="button" class="auth-toggle-btn" id="modeSignupBtn" onclick="switchAuthMode('signup')">Register</button>
+      </div>
       
       <form id="authForm" onsubmit="handleAuth(event)">
         <label style="text-align: left;">Email Address</label>
@@ -150,7 +177,18 @@
         <label style="text-align: left;">Password</label>
         <input type="password" id="authPassword" placeholder="••••••••" required>
 
-        <button type="submit" id="authSubmitBtn" class="btn btn-lime"><i data-lucide="log-in"></i> Sign In / Register</button>
+        <!-- Cloudflare Turnstile Captcha Widget -->
+        <div class="turnstile-wrapper">
+          <div class="cf-turnstile" 
+               data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" 
+               data-callback="onTurnstileSuccess" 
+               data-theme="dark">
+          </div>
+        </div>
+
+        <button type="submit" id="authSubmitBtn" class="btn btn-lime">
+          <i data-lucide="log-in" id="authBtnIcon"></i> <span id="authBtnText">Sign In</span>
+        </button>
       </form>
     </div>
   </div>
@@ -258,10 +296,16 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Your Direct Discord Server Invite Link
     const DISCORD_INVITE_URL = "https://discord.com/invite/ChmhSPy6RR";
 
     let currentUser = null;
+    let turnstileToken = null;
+    let currentAuthMode = 'signin'; // 'signin' or 'signup'
+
+    // Cloudflare Turnstile Callback
+    window.onTurnstileSuccess = function(token) {
+      turnstileToken = token;
+    };
 
     function showToast(message, type = 'success') {
       const container = document.getElementById('toastContainer');
@@ -275,6 +319,25 @@
         toast.classList.remove('show');
         setTimeout(() => toast.remove(), 300);
       }, 4000);
+    }
+
+    function switchAuthMode(mode) {
+      currentAuthMode = mode;
+      const signinBtn = document.getElementById('modeSigninBtn');
+      const signupBtn = document.getElementById('modeSignupBtn');
+      const btnText = document.getElementById('authBtnText');
+
+      if (mode === 'signin') {
+        signinBtn.classList.add('active');
+        signupBtn.classList.remove('active');
+        btnText.innerText = 'Sign In';
+      } else {
+        signupBtn.classList.add('active');
+        signinBtn.classList.remove('active');
+        btnText.innerText = 'Register Account';
+      }
+      if (window.turnstile) turnstile.reset();
+      turnstileToken = null;
     }
 
     async function syncUserProfile() {
@@ -325,21 +388,46 @@
 
     async function handleAuth(e) {
       e.preventDefault();
-      const email = document.getElementById('authEmail').value;
+      const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
 
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-      
-      if (error) {
-        const { error: signUpErr } = await supabaseClient.auth.signUp({ email, password });
-        if (signUpErr) showToast(signUpErr.message, 'error');
-        else {
-          showToast("Account registered! Logging in...");
+      // Ensure CAPTCHA challenge is completed
+      if (!turnstileToken) {
+        showToast("Please complete the CAPTCHA verification to proceed.", "error");
+        return;
+      }
+
+      const activeToken = turnstileToken;
+      turnstileToken = null; // Clear token immediately to prevent reuse
+
+      if (currentAuthMode === 'signin') {
+        const { error } = await supabaseClient.auth.signInWithPassword({ 
+          email, 
+          password,
+          options: { captchaToken: activeToken }
+        });
+
+        if (error) {
+          showToast(error.message, 'error');
+          if (window.turnstile) turnstile.reset();
+        } else {
+          showToast("Signed in successfully!");
           init();
         }
       } else {
-        showToast("Signed in successfully!");
-        init();
+        const { error } = await supabaseClient.auth.signUp({ 
+          email, 
+          password,
+          options: { captchaToken: activeToken }
+        });
+
+        if (error) {
+          showToast(error.message, 'error');
+          if (window.turnstile) turnstile.reset();
+        } else {
+          showToast("Account created successfully! Logging you in...");
+          init();
+        }
       }
     }
 
@@ -379,7 +467,6 @@
       const statusMap = { 'Submitted': 1, 'Time Slot Offered': 2, 'Scheduled': 3, 'Confirmed': 4, 'Closed': 4 };
       const currentStep = statusMap[activeTicket.status] || 1;
 
-      // Render Discord box when status is Scheduled, Confirmed, or Closed
       const isConfirmedOrScheduled = (activeTicket.status === 'Confirmed' || activeTicket.status === 'Scheduled' || activeTicket.status === 'Closed');
 
       const discordBlock = `
