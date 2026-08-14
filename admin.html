@@ -126,15 +126,19 @@
     .thread-item { 
       padding: 16px; 
       border-bottom: 1px solid var(--card-border); 
+      border-left: 4px solid transparent;
       cursor: pointer; 
       display: flex; 
       align-items: center; 
       justify-content: space-between; 
-      transition: background 0.2s;
+      transition: background 0.2s, border-color 0.2s;
     }
-    .thread-item:hover, .thread-item.active { 
+    .thread-item:hover {
+      background: var(--input-bg);
+    }
+    .thread-item.active { 
       background: var(--input-bg); 
-      border-left: 4px solid var(--primary); 
+      border-left-color: var(--primary); 
     }
     .thread-email { 
       font-weight: 700; 
@@ -594,6 +598,15 @@
         ...profileUserIds
       ]));
 
+      // Sort users: Most recent message activity first
+      allUserIds.sort((a, b) => {
+        const msgsA = userMap[a] || [];
+        const msgsB = userMap[b] || [];
+        const lastA = msgsA.length ? new Date(msgsA[msgsA.length - 1].created_at || 0).getTime() : 0;
+        const lastB = msgsB.length ? new Date(msgsB[msgsB.length - 1].created_at || 0).getTime() : 0;
+        return lastB - lastA;
+      });
+
       container.innerHTML = '';
 
       if (allUserIds.length === 0) {
@@ -607,11 +620,12 @@
         const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         const userEmailDisplay = getUserEmail(uId);
 
-        // Green dot appears STRICTLY if this specific user has sent unread messages AND is not currently selected
-        const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.sender_role === 'user' && m.status === 'unread');
+        // FIX: Green dot appears STRICTLY if this specific user has unread messages AND is not currently open
+        const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.user_id === uId && m.sender_role === 'user' && m.status === 'unread');
 
         const item = document.createElement('div');
         item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
+        item.setAttribute('data-user-id', uId);
         item.onclick = () => selectThread(uId);
         item.innerHTML = `
           <div style="overflow: hidden; flex: 1;">
@@ -649,7 +663,7 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Sync database status for this user
+    // Sync database status for this specific user only
     try {
       await supabaseClient
         .from('chat_messages')
