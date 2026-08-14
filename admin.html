@@ -174,183 +174,18 @@
 </div>
 
 <script>
-  const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-
-  const { createClient } = window.supabase;
-  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  let currentAdminId = null;
-  let allTickets = [];
-  let allProfiles = [];
-  let allMessages = [];
-  let activeChatUserId = null;
-
-  async function init() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-
-    if (!session) {
-      alert("Access Denied: Please sign in through the Client Portal first.");
-      window.location.href = "index.html";
-      return;
-    }
-
-    currentAdminId = session.user.id;
-
-    const { data: profile } = await supabaseClient
-      .from('profiles')
-      .select('role')
-      .eq('id', currentAdminId)
-      .single();
-
-    if (!profile || profile.role !== 'admin') {
-      alert("⛔ Access Denied: You do not have Administrator permissions.");
-      window.location.href = "index.html";
-      return;
-    }
-
-    await loadUsers();
-    await loadTickets();
-    await loadDMs();
-    setupRealtime();
-  }
-
-  async function adminSignOut() {
-    await supabaseClient.auth.signOut();
-    window.location.href = "index.html";
-  }
-
-  function switchTab(tabName, btnElement) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
-    btnElement.classList.add('active');
-    document.getElementById(`view-${tabName}`).classList.add('active');
-  }
-
-  /* ------------------- ACCOUNTS MANAGEMENT ------------------- */
-  async function loadUsers() {
-    const { data: profiles } = await supabaseClient.from('profiles').select('*').order('created_at', { ascending: false });
-    allProfiles = profiles || [];
-    renderAccounts();
-  }
-
-  function renderAccounts() {
-    const container = document.getElementById('users-list');
-    container.innerHTML = '';
-
-    const totalUsers = allProfiles.length;
-    const adminCount = allProfiles.filter(p => p.role === 'admin').length;
-    const clientCount = totalUsers - adminCount;
-
-    document.getElementById('stat-users-total').innerText = totalUsers;
-    document.getElementById('stat-users-admins').innerText = adminCount;
-    document.getElementById('stat-users-clients').innerText = clientCount;
-
-    if (allProfiles.length === 0) {
-      container.innerHTML = `<div class="empty-state">No registered accounts found in the profiles table.</div>`;
-      return;
-    }
-
-    allProfiles.forEach(user => {
-      const isAdmin = user.role === 'admin';
-      const isSelf = user.id === currentAdminId;
-
-      const card = document.createElement('div');
-      card.className = `user-card ${isAdmin ? 'is-admin' : 'is-client'}`;
-      card.innerHTML = `
-        <div class="user-header">
-          <div>
-            <strong style="font-size: 16px;">${user.email || 'No Email Recorded'}</strong>
-            ${isSelf ? '<span style="font-size: 11px; color: var(--primary); margin-left: 8px;">(You)</span>' : ''}
-          </div>
-          <div class="header-actions">
-            <span class="status-badge ${isAdmin ? 'admin-role' : 'user-role'}">${isAdmin ? '🛡️ Administrator' : '👤 Client'}</span>
-            ${isAdmin ? 
-              `<button class="btn btn-demote" ${isSelf ? 'disabled style="opacity:0.5; cursor:not-allowed;" title="You cannot demote yourself"' : ''} onclick="updateUserRole('${user.id}', 'user')">Demote to Client</button>` : 
-              `<button class="btn btn-promote" onclick="updateUserRole('${user.id}', 'admin')">👑 Make Admin</button>`
-            }
-          </div>
-        </div>
-        <div class="details-grid" style="margin-bottom:0;">
-          <div><span>Email ID</span><strong style="color: var(--primary);">${user.email || 'No Email Recorded'}</strong></div>
-          <div><span>System Role</span><strong>${user.role || 'user'}</strong></div>
-        </div>
-      `;
-      container.appendChild(card);
-    });
-  }
-
-  async function updateUserRole(userId, newRole) {
-    if (userId === currentAdminId && newRole === 'user') {
-      return alert("Action blocked: You cannot demote your own active admin account.");
-    }
-
-    const actionText = newRole === 'admin' ? 'promote this user to Administrator' : 'demote this user to Client';
-    if (!confirm(`Are you sure you want to ${actionText}?`)) return;
-
-    const { error } = await supabaseClient
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', userId);
-
-    if (error) {
-      alert("Failed to update role: " + error.message);
-    } else {
-      await loadUsers();
-      renderTickets();
-    }
-  }
-
-  /* ------------------- TICKET MANAGEMENT ------------------- */
-  async function loadTickets() {
-    const { data: tickets } = await supabaseClient.from('tickets').select('*').order('created_at', { ascending: false });
-    allTickets = tickets || [];
-    updateTicketStats();
-    renderTickets();
-  }
-
-  function updateTicketStats() {
-    document.getElementById('stat-total').innerText = allTickets.length;
-    document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('submit')).length;
-    document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted' || t.status === 'Confirmed').length;
-    document.getElementById('stat-closed').innerText = allTickets.filter(t => t.status === 'Closed' || t.status === 'Cancelled').length;
-  }
-
-  function renderTickets() {
-    const container = document.getElementById('tickets-list');
-    container.innerHTML = '';
-
-    if (allTickets.length === 0) {
-      container.innerHTML = `<div class="empty-state">No session tickets found.</div>`;
-      return;
-    }
-
-    allTickets.forEach(ticket => {
-      const userProfile = allProfiles.find(p => p.id === ticket.user_id);
-      const userEmail = userProfile ? userProfile.email : ticket.user_id;
-      const statusKey = (ticket.status || 'Submitted').toLowerCase();
-
-      const card = document.createElement('div');
-      card.className = `ticket-card ${statusKey}`;
-      card.innerHTML = `
-        <div class="ticket-header">
-          <strong style="font-size: 16px;">Ticket #TCK-${ticket.ticket_number}</strong>
-          <div class="header-actions">
-            <span class="status-badge ${statusKey}">${ticket.status}</span>
-            <button class="btn btn-d<script>
-  // SUPABASE CONFIGURATION & DISCORD LINK
+  // SUPABASE CONFIGURATION
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjjFNmbL";
-  const DISCORD_INVITE_URL = "https://discord.gg/SaMJRr4Y8";
 
   const { createClient } = window.supabase;
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let currentAdmin = null;
-  let selectedTicketId = null;
-  let selectedUserId = null;
+  let selectedChatUserId = null;
+  let unreadUsers = new Set();
 
-  // --- TIMEZONE & FORMATTING UTILITIES ---
+  // --- TIMEZONE FORMATTING ---
   function formatLocalDate(isoString) {
     if (!isoString) return 'N/A';
     const date = new Date(isoString);
@@ -363,25 +198,35 @@
     });
   }
 
-  // --- AUTHENTICATION & ADMIN VERIFICATION ---
+  // --- TAB NAVIGATION ---
+  window.switchTab = function(tabName, btnElement) {
+    document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+    const activePanel = document.getElementById(`view-${tabName}`);
+    if (activePanel) activePanel.classList.add('active');
+    if (btnElement) btnElement.classList.add('active');
+  };
+
+  // --- AUTHENTICATION & SESSION MANAGEMENT ---
   window.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
-      verifyAndInitAdmin(session.user);
+      verifyAdminAccess(session.user);
     } else {
-      showAdminAuthUI();
+      redirectToLogin();
     }
 
     supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        verifyAndInitAdmin(session.user);
+        verifyAdminAccess(session.user);
       } else {
-        showAdminAuthUI();
+        redirectToLogin();
       }
     });
   });
 
-  async function verifyAndInitAdmin(user) {
+  async function verifyAdminAccess(user) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -391,258 +236,254 @@
     const isAdmin = (profile && profile.role === 'admin') || user.email === 'aviatorrudra@gmail.com';
 
     if (!isAdmin) {
-      alert("Access Denied: You do not have administrator permissions.");
+      alert("Access Denied: Admin privileges required.");
       await supabase.auth.signOut();
-      showAdminAuthUI();
+      redirectToLogin();
       return;
     }
 
     currentAdmin = user;
-    const authContainer = document.getElementById('authContainer');
-    const adminDashboard = document.getElementById('adminDashboard');
-    const adminEmailDisplay = document.getElementById('adminEmailDisplay');
-
-    if (authContainer) authContainer.classList.add('hidden');
-    if (adminDashboard) adminDashboard.classList.remove('hidden');
-    if (adminEmailDisplay) adminEmailDisplay.innerText = user.email;
-
-    loadAllTickets();
-    subscribeAdminRealtime();
+    loadDashboardData();
+    subscribeRealtime();
   }
 
-  function showAdminAuthUI() {
-    currentAdmin = null;
-    const authContainer = document.getElementById('authContainer');
-    const adminDashboard = document.getElementById('adminDashboard');
-    
-    if (authContainer) authContainer.classList.remove('hidden');
-    if (adminDashboard) adminDashboard.classList.add('hidden');
+  function redirectToLogin() {
+    window.location.href = 'index.html';
   }
 
-  async function handleAdminLogin(e) {
-    e.preventDefault();
-    const email = document.getElementById('adminEmail').value;
-    const password = document.getElementById('adminPassword').value;
-
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert("Login failed: " + error.message);
-    } else if (data.user) {
-      verifyAndInitAdmin(data.user);
-    }
-  }
-
-  async function handleAdminLogout() {
+  window.adminSignOut = async function() {
     await supabase.auth.signOut();
-    window.location.reload();
+    redirectToLogin();
+  };
+
+  // --- DASHBOARD DATA LOADER ---
+  async function loadDashboardData() {
+    await Promise.all([
+      loadTickets(),
+      loadUserAccounts(),
+      loadChatThreads()
+    ]);
   }
 
-  // --- TICKET & BOOKING MANAGEMENT ---
-  async function loadAllTickets() {
+  // --- TICKETS MANAGEMENT ---
+  async function loadTickets() {
     const { data: tickets, error } = await supabase
       .from('tickets')
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error loading tickets:", error);
+    const container = document.getElementById('tickets-list');
+    if (error || !container) return;
+
+    // Update Stats
+    document.getElementById('stat-total').innerText = tickets.length;
+    document.getElementById('stat-pending').innerText = tickets.filter(t => t.status === 'submitted' || t.status === 'slot_offered').length;
+    document.getElementById('stat-active').innerText = tickets.filter(t => t.status === 'accepted' || t.status === 'confirmed').length;
+    document.getElementById('stat-closed').innerText = tickets.filter(t => t.status === 'closed' || t.status === 'cancelled').length;
+
+    if (tickets.length === 0) {
+      container.innerHTML = `<div class="empty-state">No consultation bookings submitted yet.</div>`;
       return;
     }
 
-    renderTicketsList(tickets);
+    container.innerHTML = tickets.map(ticket => `
+      <div class="ticket-card ${ticket.status}">
+        <div class="ticket-header">
+          <div>
+            <span style="font-weight:700; font-size:14px; color:var(--primary);">Ticket #${ticket.id.slice(0, 8)}</span>
+            <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">User: <strong>${ticket.user_email || 'N/A'}</strong></div>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge ${ticket.status}">${ticket.status.replace('_', ' ')}</span>
+            <button class="btn-delete" onclick="deleteTicket('${ticket.id}')">Delete</button>
+          </div>
+        </div>
+
+        <div class="details-grid">
+          <div><span>Requested On</span>${formatLocalDate(ticket.created_at)}</div>
+          <div><span>Offered Slot</span>${ticket.offered_slot ? formatLocalDate(ticket.offered_slot) : 'Not Offered Yet'}</div>
+          <div><span>Client Notes</span>${ticket.notes || 'None provided'}</div>
+        </div>
+
+        <div class="action-box">
+          <div class="action-row">
+            <input type="datetime-local" id="slot-input-${ticket.id}" />
+            <button class="btn btn-offer" onclick="offerSlot('${ticket.id}')">Offer Slot</button>
+          </div>
+          <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+            <button class="btn btn-accept" onclick="updateTicketStatus('${ticket.id}', 'confirmed')">Confirm Booking</button>
+            <button class="btn btn-cancel" onclick="updateTicketStatus('${ticket.id}', 'closed')">Close Ticket</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
   }
 
-  function renderTicketsList(tickets) {
-    const container = document.getElementById('ticketsListContainer');
-    if (!container) return;
+  window.offerSlot = async function(ticketId) {
+    const input = document.getElementById(`slot-input-${ticketId}`);
+    if (!input || !input.value) return alert("Please select a valid date and time slot first.");
 
-    container.innerHTML = '';
-    if (!tickets || tickets.length === 0) {
-      container.innerHTML = `<div class="p-4 text-xs text-slate-500 text-center">No ticket requests found.</div>`;
+    const isoSlot = new Date(input.value).toISOString();
+
+    const { error } = await supabase
+      .from('tickets')
+      .update({ offered_slot: isoSlot, status: 'slot_offered' })
+      .eq('id', ticketId);
+
+    if (error) alert("Error offering slot: " + error.message);
+    else loadTickets();
+  };
+
+  window.updateTicketStatus = async function(ticketId, status) {
+    const { error } = await supabase
+      .from('tickets')
+      .update({ status: status })
+      .eq('id', ticketId);
+
+    if (error) alert("Error updating ticket: " + error.message);
+    else loadTickets();
+  };
+
+  window.deleteTicket = async function(ticketId) {
+    if (!confirm("Are you sure you want to permanently delete this ticket?")) return;
+
+    const { error } = await supabase.from('tickets').delete().eq('id', ticketId);
+    if (error) alert("Error deleting ticket: " + error.message);
+    else loadTickets();
+  };
+
+  // --- ACCOUNTS MANAGEMENT ---
+  async function loadUserAccounts() {
+    const { data: profiles, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    const container = document.getElementById('users-list');
+    if (error || !container) return;
+
+    const admins = profiles.filter(p => p.role === 'admin').length;
+    const clients = profiles.length - admins;
+
+    document.getElementById('stat-users-total').innerText = profiles.length;
+    document.getElementById('stat-users-admins').innerText = admins;
+    document.getElementById('stat-users-clients').innerText = clients;
+
+    if (profiles.length === 0) {
+      container.innerHTML = `<div class="empty-state">No registered accounts found.</div>`;
       return;
     }
 
-    tickets.forEach(ticket => {
-      const card = document.createElement('div');
-      card.className = `p-4 rounded-xl border transition-all cursor-pointer ${selectedTicketId === ticket.id ? 'border-blue-500 bg-slate-800/80' : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'}`;
-      card.onclick = () => selectTicket(ticket);
-
-      card.innerHTML = `
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-mono font-bold text-blue-400">#${ticket.id.slice(0, 8)}</span>
-          <span class="text-[10px] px-2 py-0.5 rounded-full uppercase font-semibold ${getStatusBadgeClass(ticket.status)}">${ticket.status.replace('_', ' ')}</span>
+    container.innerHTML = profiles.map(user => `
+      <div class="user-card ${user.role === 'admin' ? 'is-admin' : 'is-client'}">
+        <div class="user-header">
+          <div>
+            <div style="font-weight:700; font-size:14px; color:var(--text-main);">${user.email}</div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">ID: ${user.id}</div>
+          </div>
+          <div class="header-actions">
+            <span class="status-badge ${user.role === 'admin' ? 'admin-role' : 'user-role'}">${user.role || 'user'}</span>
+            ${user.role === 'admin' 
+              ? `<button class="btn btn-demote" onclick="updateUserRole('${user.id}', 'user')">Demote to User</button>`
+              : `<button class="btn btn-promote" onclick="updateUserRole('${user.id}', 'admin')">Promote to Admin</button>`
+            }
+          </div>
         </div>
-        <div class="text-xs font-medium text-slate-200 truncate">${ticket.user_email || 'Client Ticket'}</div>
-        <div class="text-[10px] text-slate-400 mt-1">${formatLocalDate(ticket.created_at)}</div>
-      `;
-      container.appendChild(card);
+      </div>
+    `).join('');
+  }
+
+  window.updateUserRole = async function(userId, newRole) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+
+    if (error) alert("Failed to update role: " + error.message);
+    else loadUserAccounts();
+  };
+
+  // --- SUPPORT CHAT & DM MANAGEMENT ---
+  async function loadChatThreads() {
+    const { data: messages, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    const threadsContainer = document.getElementById('threads-list');
+    if (error || !threadsContainer) return;
+
+    if (messages.length === 0) {
+      threadsContainer.innerHTML = `<div class="empty-state">No support threads found.</div>`;
+      return;
+    }
+
+    // Group messages by user_id
+    const userMap = {};
+    messages.forEach(msg => {
+      if (!userMap[msg.user_id]) {
+        userMap[msg.user_id] = msg;
+      }
     });
 
-    if (selectedTicketId) {
-      const active = tickets.find(t => t.id === selectedTicketId);
-      if (active) renderTicketDetails(active);
-    }
+    threadsContainer.innerHTML = Object.keys(userMap).map(userId => {
+      const lastMsg = userMap[userId];
+      const hasUnread = unreadUsers.has(userId);
+
+      return `
+        <div class="thread-item ${selectedChatUserId === userId ? 'active' : ''}" onclick="selectChatThread('${userId}')">
+          <div>
+            <div class="thread-email">Client ID: ${userId.slice(0, 8)}...</div>
+            <div class="thread-preview">${lastMsg.message}</div>
+          </div>
+          ${hasUnread ? `<div class="green-dot"></div>` : ''}
+        </div>
+      `;
+    }).join('');
   }
 
-  function getStatusBadgeClass(status) {
-    switch(status) {
-      case 'submitted': return 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
-      case 'slot_offered': return 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
-      case 'accepted': return 'bg-purple-500/10 text-purple-400 border border-purple-500/20';
-      case 'confirmed': return 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-      case 'closed': return 'bg-slate-800 text-slate-400 border border-slate-700';
-      default: return 'bg-slate-800 text-slate-300';
-    }
-  }
-
-  function selectTicket(ticket) {
-    selectedTicketId = ticket.id;
-    selectedUserId = ticket.user_id;
-    renderTicketDetails(ticket);
-    loadAllTickets();
-    fetchAdminChatMessages();
-  }
-
-  function renderTicketDetails(ticket) {
-    const detailBox = document.getElementById('ticketDetailBox');
-    if (!detailBox) return;
-
-    detailBox.classList.remove('hidden');
-
-    const elId = document.getElementById('detailTicketId');
-    const elEmail = document.getElementById('detailUserEmail');
-    const elStatus = document.getElementById('detailStatus');
-    const elNotes = document.getElementById('detailNotes');
-    const elSlot = document.getElementById('detailSlot');
-    const elCommentInput = document.getElementById('adminCommentInput');
-
-    if (elId) elId.innerText = `#${ticket.id.slice(0, 8)}`;
-    if (elEmail) elEmail.innerText = ticket.user_email;
-    if (elStatus) elStatus.innerText = ticket.status.replace('_', ' ');
-    if (elNotes) elNotes.innerText = ticket.notes || 'No client notes.';
-    if (elSlot) elSlot.innerText = ticket.offered_slot ? formatLocalDate(ticket.offered_slot) : 'Not Offered Yet';
-    if (elCommentInput) elCommentInput.value = ticket.admin_comment || '';
-  }
-
-  async function handleOfferSlot(e) {
-    e.preventDefault();
-    if (!selectedTicketId) return alert("Select a ticket first.");
-
-    const slotInput = document.getElementById('slotDatetimeInput');
-    if (!slotInput || !slotInput.value) return alert("Please select a valid date and time.");
-
-    const isoSlot = new Date(slotInput.value).toISOString();
-
-    const { error } = await supabase
-      .from('tickets')
-      .update({
-        offered_slot: isoSlot,
-        status: 'slot_offered'
-      })
-      .eq('id', selectedTicketId);
-
-    if (error) {
-      alert("Error offering slot: " + error.message);
-    } else {
-      loadAllTickets();
-    }
-  }
-
-  async function handleConfirmBooking() {
-    if (!selectedTicketId) return alert("Select a ticket first.");
-
-    const { error } = await supabase
-      .from('tickets')
-      .update({ status: 'confirmed' })
-      .eq('id', selectedTicketId);
-
-    if (error) {
-      alert("Error confirming booking: " + error.message);
-    } else {
-      loadAllTickets();
-    }
-  }
-
-  async function handleSaveAdminComment() {
-    if (!selectedTicketId) return alert("Select a ticket first.");
-    const comment = document.getElementById('adminCommentInput').value;
-
-    const { error } = await supabase
-      .from('tickets')
-      .update({ admin_comment: comment })
-      .eq('id', selectedTicketId);
-
-    if (error) {
-      alert("Error saving comment: " + error.message);
-    } else {
-      alert("Admin comment saved successfully.");
-      loadAllTickets();
-    }
-  }
-
-  async function handleCloseTicket() {
-    if (!selectedTicketId) return alert("Select a ticket first.");
-
-    const { error } = await supabase
-      .from('tickets')
-      .update({ status: 'closed' })
-      .eq('id', selectedTicketId);
-
-    if (error) {
-      alert("Error closing ticket: " + error.message);
-    } else {
-      loadAllTickets();
-    }
-  }
-
-  // --- ADMIN CHAT MANAGEMENT ---
-  async function fetchAdminChatMessages() {
-    if (!selectedUserId) return;
+  window.selectChatThread = async function(userId) {
+    selectedChatUserId = userId;
+    unreadUsers.delete(userId);
+    loadChatThreads();
 
     const { data: messages, error } = await supabase
       .from('chat_messages')
       .select('*')
-      .eq('user_id', selectedUserId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
-    if (error) return;
-
-    const container = document.getElementById('adminChatMessages');
-    if (!container) return;
-    container.innerHTML = '';
+    const chatContainer = document.getElementById('chat-messages-container');
+    if (error || !chatContainer) return;
 
     if (messages.length === 0) {
-      container.innerHTML = `<div class="text-center text-xs text-slate-500 py-8">No conversation history with this client yet.</div>`;
+      chatContainer.innerHTML = `<div class="empty-state">No messages in this thread yet.</div>`;
       return;
     }
 
-    messages.forEach(msg => {
-      const isAdminMsg = msg.sender_id === currentAdmin.id;
-      const msgEl = document.createElement('div');
-      msgEl.className = `flex flex-col ${isAdminMsg ? 'items-end' : 'items-start'}`;
-      msgEl.innerHTML = `
-        <div class="max-w-[80%] rounded-xl px-4 py-2.5 text-xs ${isAdminMsg ? 'bg-blue-600 text-white shadow-md shadow-blue-600/10' : 'bg-slate-800 text-slate-200 border border-slate-700/80'}">
+    chatContainer.innerHTML = messages.map(msg => {
+      const isAdmin = msg.sender_id === currentAdmin.id;
+      return `
+        <div class="chat-bubble ${isAdmin ? 'admin' : 'user'}">
           ${msg.message}
+          <div style="font-size:9px; opacity:0.7; margin-top:4px; text-align:right;">${formatLocalDate(msg.created_at)}</div>
         </div>
-        <span class="text-[10px] text-slate-500 mt-1 px-1">${formatLocalDate(msg.created_at)}</span>
       `;
-      container.appendChild(msgEl);
-    });
+    }).join('');
 
-    container.scrollTop = container.scrollHeight;
-  }
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  };
 
-  async function sendAdminChatMessage(e) {
-    e.preventDefault();
-    if (!selectedUserId || !currentAdmin) return alert("Select a client ticket to reply.");
+  window.sendAdminMessage = async function() {
+    if (!selectedChatUserId) return alert("Select a chat thread first.");
 
-    const input = document.getElementById('adminChatInput');
+    const input = document.getElementById('admin-chat-input');
     if (!input) return;
     const text = input.value.trim();
-    if (!text) return;
+    if (!text || !currentAdmin) return;
 
     const { error } = await supabase.from('chat_messages').insert([{
-      user_id: selectedUserId,
+      user_id: selectedChatUserId,
       sender_id: currentAdmin.id,
       message: text
     }]);
@@ -651,23 +492,38 @@
       alert("Failed to send message: " + error.message);
     } else {
       input.value = '';
-      fetchAdminChatMessages();
+      selectChatThread(selectedChatUserId);
     }
-  }
+  };
 
-  // --- REALTIME LISTENERS ---
-  function subscribeAdminRealtime() {
+  // --- REALTIME SUBSCRIPTION & CONNECTION STATUS ---
+  function subscribeRealtime() {
+    const badge = document.getElementById('admin-connection-status');
+
     supabase
-      .channel('admin-realtime')
+      .channel('admin-realtime-channel')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
-        loadAllTickets();
+        loadTickets();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
-        if (payload.new.user_id === selectedUserId) {
-          fetchAdminChatMessages();
+        if (payload.new.user_id === selectedChatUserId) {
+          selectChatThread(selectedChatUserId);
+        } else {
+          unreadUsers.add(payload.new.user_id);
+          loadChatThreads();
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (badge) {
+          if (status === 'SUBSCRIBED') {
+            badge.className = 'connection-badge connected';
+            badge.innerHTML = '🟢 Connected';
+          } else {
+            badge.className = 'connection-badge connecting';
+            badge.innerHTML = '🟡 Connecting...';
+          }
+        }
+      });
   }
 </script>
 </body>
