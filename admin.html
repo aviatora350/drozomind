@@ -75,7 +75,7 @@
     
     .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
     .status-badge.accepted, .status-badge.confirmed, .status-badge.admin-role { background: var(--primary); color: var(--primary-text); }
-    .status-badge.offered { background: var(--warning); color: #000; }
+    .status-badge.offered, .status-badge.slot-offered { background: var(--warning); color: #000; }
     .status-badge.cancelled, .status-badge.closed { background: var(--danger); color: #fff; }
     .status-badge.user-role { background: var(--input-border); color: var(--text-muted); }
 
@@ -164,7 +164,7 @@
       <div class="chat-window">
         <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a conversation thread to view messages.</div></div>
         <div class="chat-input-row">
-          <input type="text" id="admin-chat-input" placeholder="Type a response...">
+          <input type="text" id="admin-chat-input" placeholder="Type a response..." onkeydown="if(event.key==='Enter') sendAdminMessage()">
           <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
         </div>
       </div>
@@ -186,7 +186,6 @@
   let allMessages = [];
   let activeChatUserId = null;
 
-  // Timezone Helper: Formats stored ISO time strings into admin's local timezone (e.g. IST)
   function formatLocalDateTime(isoString) {
     if (!isoString) return 'None';
     const date = new Date(isoString);
@@ -194,7 +193,6 @@
     return date.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' });
   }
 
-  // Guaranteed lookup helper to map User ID to Email
   function getUserEmail(userId) {
     const profile = allProfiles.find(p => p.id === userId);
     if (profile && profile.email) return profile.email;
@@ -211,12 +209,22 @@
     }
 
     currentAdminId = session.user.id;
+    const adminEmail = session.user.email || '';
+
+    // Auto-promotion safeguard for primary admin
+    if (adminEmail.toLowerCase() === 'aviatorrudra@gmail.com') {
+      await supabaseClient.from('profiles').upsert({
+        id: currentAdminId,
+        email: adminEmail,
+        role: 'admin'
+      });
+    }
 
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('role')
       .eq('id', currentAdminId)
-      .single();
+      .maybeSingle();
 
     if (!profile || profile.role !== 'admin') {
       alert("⛔ Access Denied: You do not have Administrator permissions.");
@@ -224,7 +232,6 @@
       return;
     }
 
-    // MANDATORY ORDER: Load users first so profiles/emails are available to tickets and chat threads
     await loadUsers();
     await loadTickets();
     await loadDMs();
@@ -245,7 +252,6 @@
 
   /* ------------------- ACCOUNTS MANAGEMENT ------------------- */
   async function loadUsers() {
-    // Note: Querying profiles directly without .order('created_at') prevents column-missing SQL errors
     const { data: profiles, error } = await supabaseClient.from('profiles').select('*');
     if (error) console.error("Error fetching profiles:", error);
     allProfiles = profiles || [];
@@ -346,7 +352,8 @@
 
     allTickets.forEach(ticket => {
       const userEmail = getUserEmail(ticket.user_id);
-      const statusKey = (ticket.status || 'Submitted').toLowerCase();
+      const rawStatus = ticket.status || 'Submitted';
+      const statusKey = rawStatus.toLowerCase().replace(/\s+/g, '-');
 
       const card = document.createElement('div');
       card.className = `ticket-card ${statusKey}`;
@@ -354,7 +361,7 @@
         <div class="ticket-header">
           <strong style="font-size: 16px;">Ticket #TCK-${ticket.ticket_number}</strong>
           <div class="header-actions">
-            <span class="status-badge ${statusKey}">${ticket.status}</span>
+            <span class="status-badge ${statusKey}">${rawStatus}</span>
             <button class="btn btn-delete" onclick="deleteTicket('${ticket.id}')">🗑️ Delete</button>
           </div>
         </div>
@@ -370,8 +377,8 @@
 
         <div class="action-box">
           <div class="action-row">
-            <div><label>Accept Slot Directly & Attach Invite:</label><span>${formatLocalDateTime(ticket.pref_time || ticket.offered_time)}</span></div>
-            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">Accept & Send Link</button>
+            <div><label>Confirm Session & Attach Invite Link:</label><span>${formatLocalDateTime(ticket.pref_time || ticket.offered_time || ticket.accepted_time)}</span></div>
+            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ticket.accepted_time || ''}')">Confirm & Send Link</button>
           </div>
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
@@ -390,7 +397,7 @@
   }
 
   async function acceptTicket(ticketId, chosenTime) {
-    if (!chosenTime) return alert("No time slot selected.");
+    if (!chosenTime) return alert("No valid time slot selected.");
 
     const discordLink = prompt("Paste the 1-time Discord Invite Link for this session:");
     if (!discordLink) return alert("Confirmation cancelled: A Discord invite link is required.");
@@ -416,7 +423,10 @@
     const val = document.getElementById(`slot-picker-${ticketId}`).value;
     if (!val) return alert("Select date/time first.");
 
-    const isoTime = new Date(val).toISOString();
+    const dateObj = new Date(val);
+    if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
+
+    const isoTime = dateObj.toISOString();
     const newCount = currentCount + 1;
 
     if (newCount >= 2) {
