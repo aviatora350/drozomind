@@ -88,6 +88,7 @@
     input[type="datetime-local"], input[type="text"], select { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
 
     .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-accept { background-color: var(--primary); }
     .btn-offer { background-color: var(--warning); color: #000; }
     .btn-cancel { background-color: var(--danger); color: #fff; }
@@ -173,8 +174,8 @@
       <div class="chat-window">
         <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a user or conversation thread to view messages.</div></div>
         <div class="chat-input-row">
-          <input type="text" id="admin-chat-input" placeholder="Type a response..." onkeydown="if(event.key==='Enter') sendAdminMessage()">
-          <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
+          <input type="text" id="admin-chat-input" placeholder="Type a response..." onkeydown="if(event.key==='Enter') sendAdminMessage()" disabled autocomplete="off">
+          <button id="admin-send-btn" class="btn btn-accept" onclick="sendAdminMessage()" disabled>Send DM</button>
         </div>
       </div>
     </div>
@@ -194,6 +195,7 @@
   let allProfiles = [];
   let allMessages = [];
   let activeChatUserId = null;
+  let isSendingAdmin = false;
 
   function formatLocalDateTime(isoString) {
     if (!isoString) return 'None';
@@ -220,7 +222,6 @@
     currentAdminId = session.user.id;
     const adminEmail = session.user.email || '';
 
-    // Auto-promotion safeguard for primary admin
     if (adminEmail.toLowerCase() === 'aviatorrudra@gmail.com') {
       await supabaseClient.from('profiles').upsert({
         id: currentAdminId,
@@ -266,6 +267,7 @@
     allProfiles = profiles || [];
     renderAccounts();
     populateUserChatDropdown();
+    renderThreads();
   }
 
   function populateUserChatDropdown() {
@@ -490,12 +492,23 @@
   async function loadDMs() {
     const { data: msgs } = await supabaseClient.from('chat_messages').select('*').order('created_at', { ascending: true });
     allMessages = msgs || [];
+
+    // Clear unread in memory for currently active chat
+    if (activeChatUserId) {
+      allMessages.forEach(m => {
+        if (m.user_id === activeChatUserId && m.sender_role === 'user') {
+          m.status = 'read';
+        }
+      });
+    }
+
     renderThreads();
     if (activeChatUserId) renderChatWindow(activeChatUserId);
   }
 
   function renderThreads() {
     const container = document.getElementById('threads-list');
+    if (!container) return;
     container.innerHTML = '';
 
     const userMap = {};
@@ -504,25 +517,31 @@
       userMap[m.user_id].push(m);
     });
 
-    const userIds = Object.keys(userMap);
-    if (userIds.length === 0) {
-      container.innerHTML = `<div class="empty-state">No chat messages yet. Use the dropdown above to initiate a chat with any account.</div>`;
+    const allUserIds = Array.from(new Set([
+      ...Object.keys(userMap),
+      ...allProfiles.map(p => p.id)
+    ]));
+
+    if (allUserIds.length === 0) {
+      container.innerHTML = `<div class="empty-state">No chat messages yet. Select a user from the dropdown above.</div>`;
       return;
     }
 
-    userIds.forEach(uId => {
-      const msgs = userMap[uId];
-      const lastMsg = msgs[msgs.length - 1];
+    allUserIds.forEach(uId => {
+      const msgs = userMap[uId] || [];
+      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
       const userEmailDisplay = getUserEmail(uId);
-      const hasUnread = msgs.some(m => m.sender_role === 'user' && m.status === 'unread');
+
+      // Green Dot Rule: Only show if NOT active chat AND there are unread user messages
+      const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m.sender_role === 'user' && m.status === 'unread');
 
       const item = document.createElement('div');
       item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
       item.onclick = () => selectThread(uId);
       item.innerHTML = `
-        <div style="overflow: hidden;">
+        <div style="overflow: hidden; flex: 1;">
           <div class="thread-email" title="${userEmailDisplay}">${userEmailDisplay}</div>
-          <div class="thread-preview">${lastMsg ? lastMsg.message : 'No messages'}</div>
+          <div class="thread-preview">${lastMsg ? lastMsg.message : 'No messages yet'}</div>
         </div>
         ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
       `;
@@ -537,9 +556,15 @@
     const selector = document.getElementById('user-chat-selector');
     if (selector) selector.value = userId;
 
-    // Mutate in-memory immediately to instant-remove green dot
+    // Enable inputs
+    const input = document.getElementById('admin-chat-input');
+    const sendBtn = document.getElementById('admin-send-btn');
+    if (input) input.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
+
+    // Clear unread in local state immediately for selected thread
     allMessages.forEach(m => {
-      if (m.user_id === userId && m.sender_role === 'user') {
+      if (m.user_id === userId) {
         m.status = 'read';
       }
     });
@@ -547,13 +572,15 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Persist read status in database
+    // Update database
     await supabaseClient
       .from('chat_messages')
       .update({ status: 'read' })
       .eq('user_id', userId)
       .eq('sender_role', 'user')
       .eq('status', 'unread');
+
+    if (input) setTimeout(() => input.focus(), 50);
   }
 
   function renderChatWindow(userId) {
@@ -579,23 +606,40 @@
   async function sendAdminMessage() {
     if (!activeChatUserId) return alert("Select a user or conversation thread first from the dropdown.");
     const input = document.getElementById('admin-chat-input');
+    const sendBtn = document.getElementById('admin-send-btn');
     const msg = input.value.trim();
-    if (!msg) return;
 
-    const { error } = await supabaseClient.from('chat_messages').insert([{
-      user_id: activeChatUserId,
-      sender_role: 'admin',
-      message: msg,
-      status: 'unread'
-    }]);
+    if (!msg || isSendingAdmin) return;
 
-    if (error) {
-      alert("Failed to send message: " + error.message);
-      return;
+    try {
+      isSendingAdmin = true;
+      sendBtn.disabled = true;
+      input.value = ''; // Instant clear
+
+      const isSelf = activeChatUserId === currentAdminId;
+      const msgStatus = isSelf ? 'read' : 'unread';
+
+      const { error } = await supabaseClient.from('chat_messages').insert([{
+        user_id: activeChatUserId,
+        sender_role: 'admin',
+        message: msg,
+        status: msgStatus
+      }]);
+
+      if (error) {
+        alert("Failed to send message: " + error.message);
+        return;
+      }
+
+      await loadDMs();
+    } catch (err) {
+      console.error("Error sending admin message:", err);
+    } finally {
+      isSendingAdmin = false;
+      sendBtn.disabled = false;
+      input.disabled = false;
+      input.focus();
     }
-
-    input.value = '';
-    await loadDMs();
   }
 
   /* ------------------- REALTIME SUBSCRIPTIONS ------------------- */
@@ -605,16 +649,16 @@
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
-        loadDMs();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, async () => {
         if (activeChatUserId) {
-          supabaseClient
+          await supabaseClient
             .from('chat_messages')
             .update({ status: 'read' })
             .eq('user_id', activeChatUserId)
             .eq('sender_role', 'user')
             .eq('status', 'unread');
         }
+        await loadDMs();
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
