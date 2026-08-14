@@ -3,246 +3,146 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Drozo Mind Therapy - Admin Portal</title>
+  <title>Drozo Therapy - Admin Control Panel</title>
   
-  <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
     :root {
       --bg-black: #030303;
-      --card-bg: rgba(18, 18, 20, 0.75);
+      --card-bg: rgba(18, 18, 20, 0.85);
       --card-border: rgba(39, 39, 42, 0.8);
       --accent-lime: #a3e635;
       --accent-lime-hover: #84cc16;
-      --accent-lime-glow: rgba(163, 230, 53, 0.15);
-      --accent-lime-dark: #3f6212;
       --text-primary: #f4f4f5;
       --text-muted: #a1a1aa;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
-    html, body { width: 100%; max-width: 100vw; overflow-x: hidden; background: var(--bg-black); color: var(--text-primary); min-height: 100vh; }
-    body { display: flex; flex-direction: column; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background: var(--bg-black); color: var(--text-primary); min-height: 100vh; padding-bottom: 40px; }
 
-    .ambient-glow {
-      position: fixed; top: -100px; right: -100px; width: 350px; height: 350px;
-      background: radial-gradient(circle, var(--accent-lime-glow) 0%, transparent 70%);
-      pointer-events: none; z-index: 0;
-    }
+    .main-container { padding: 16px; max-width: 900px; margin: 0 auto; width: 100%; }
 
-    #toastContainer {
-      position: fixed; top: 15px; right: 15px; z-index: 99999;
-      display: flex; flex-direction: column; gap: 8px; max-width: calc(100vw - 30px);
-    }
-    .toast {
-      background: #121212; border: 1px solid var(--card-border); color: #fff;
-      padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transform: translateY(-10px);
-      transition: 0.3s ease; font-size: 0.85rem; font-weight: 500;
-    }
+    #toastContainer { position: fixed; top: 15px; right: 15px; z-index: 99999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { background: #121212; border: 1px solid var(--card-border); color: #fff; padding: 12px 16px; border-radius: 8px; display: flex; align-items: center; gap: 10px; opacity: 0; transform: translateY(-10px); transition: 0.3s ease; font-size: 0.85rem; }
     .toast.show { opacity: 1; transform: translateY(0); }
     .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
     .toast-error { border-color: #ef4444; color: #fca5a5; }
 
-    .dashboard-layout { display: flex; min-height: 100vh; width: 100vw; max-width: 100vw; z-index: 1; position: relative; }
-    
-    .desktop-sidebar { width: 260px; background: #000000; color: white; padding: 25px 16px; border-right: 1px solid #18181b; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; }
-    .sidebar-brand { font-size: 1.1rem; font-weight: 700; color: var(--accent-lime); margin-bottom: 30px; display: flex; align-items: center; gap: 8px; }
-    
-    .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-    .nav-item { padding: 12px 14px; border-radius: 10px; cursor: pointer; color: var(--text-muted); font-weight: 500; font-size: 0.88rem; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
-    .nav-item:hover, .nav-item.active { background: rgba(163, 230, 53, 0.1); color: var(--accent-lime); }
-    .nav-item.portal-btn { background: #18181b; color: var(--text-primary); margin-top: 10px; font-weight: 600; border: 1px solid var(--card-border); }
-
-    .mobile-bottom-nav { display: none; }
-
-    .main-content { flex: 1; padding: 30px; overflow-y: auto; background: var(--bg-black); display: flex; flex-direction: column; justify-content: space-between; min-width: 0; max-width: 100%; }
-    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: var(--card-bg); backdrop-filter: blur(12px); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--card-border); gap: 10px; }
-    
-    .page { display: none; width: 100%; }
-    .page.active-page { display: block; animation: fadeIn 0.25s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
-    .card h3 { font-size: 1rem; color: var(--text-primary); margin-bottom: 14px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
     label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
-    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; color-scheme: dark; }
-
-    .btn { padding: 8px 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.8rem; min-height: 36px; }
-    .btn-lime { background: var(--accent-lime); color: #000000; font-weight: 700; }
-    .btn-warn { background: #f59e0b; color: #000000; font-weight: 700; }
+    input, select, textarea { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 14px; color: #fff; }
+    
+    .btn { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.85rem; }
+    .btn-lime { background: var(--accent-lime); color: #000; }
+    .btn-lime:hover { background: var(--accent-lime-hover); }
     .btn-danger { background: #ef4444; color: white; }
+    .btn-secondary { background: #27272a; color: white; }
 
-    .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .turnstile-wrapper { margin-bottom: 16px; display: flex; justify-content: center; }
 
-    .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; min-width: 650px; }
-    th, td { padding: 12px 14px; border-bottom: 1px solid var(--card-border); word-break: break-word; }
-    th { background: #09090b; color: var(--text-muted); font-weight: 600; }
+    .ticket-card { background: #09090b; border: 1px solid var(--card-border); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; background: rgba(163, 230, 53, 0.15); color: var(--accent-lime); }
 
-    .chat-box { height: 320px; border: 1px solid var(--card-border); border-radius: 10px; padding: 12px; overflow-y: auto; background: #000000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
-    .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
-    .chat-msg.admin { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; }
-    .chat-msg.user { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; }
+    .chat-box { height: 250px; border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .chat-msg { max-width: 85%; padding: 8px 12px; border-radius: 10px; font-size: 0.85rem; }
+    .chat-msg.admin { background: var(--accent-lime); color: #000; font-weight: 600; align-self: flex-end; }
+    .chat-msg.user { background: #18181b; border: 1px solid var(--card-border); color: #fff; align-self: flex-start; }
 
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
-    .badge-pending { background: #422006; color: #fef08a; border: 1px solid #854d0e; }
-    .badge-success { background: #1a2e05; color: var(--accent-lime); border: 1px solid var(--accent-lime-dark); }
-    .badge-closed { background: #2f0d0d; color: #fca5a5; border: 1px solid #991b1b; }
-
-    .footer { text-align: center; padding: 16px 0; font-size: 0.8rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 20px; }
     .hidden { display: none !important; }
-
-    @media (max-width: 768px) {
-      .dashboard-layout { flex-direction: column; width: 100vw; overflow-x: hidden; }
-      .desktop-sidebar { display: none !important; }
-
-      .mobile-bottom-nav {
-        display: flex !important;
-        position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
-        background: #09090b; border-top: 1px solid var(--card-border);
-        z-index: 9999; justify-content: space-around; align-items: center;
-        padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
-      }
-      .mobile-bottom-nav .nav-item {
-        flex-direction: column; align-items: center; justify-content: center;
-        font-size: 0.65rem; color: var(--text-muted); gap: 3px; flex: 1; text-align: center;
-      }
-      .mobile-bottom-nav .nav-item.active { color: var(--accent-lime); background: transparent; }
-      .mobile-bottom-nav .nav-item i { width: 20px; height: 20px; }
-
-      .main-content { padding: 14px 12px 80px 12px !important; width: 100vw !important; }
-      .top-header { flex-direction: column; align-items: flex-start; padding: 12px; gap: 6px; }
-      input, select, textarea { font-size: 16px !important; }
-    }
   </style>
 </head>
 <body>
 
-  <div class="ambient-glow"></div>
   <div id="toastContainer"></div>
 
-  <div id="dashboardSection" class="dashboard-layout">
+  <!-- ADMIN LOGIN PAGE -->
+  <div id="adminAuthPage" class="main-container">
+    <div class="card" style="margin-top: 50px; text-align: center;">
+      <h2 style="color: var(--accent-lime); margin-bottom: 10px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+        <i data-lucide="shield"></i> Admin Portal
+      </h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 20px;">Sign in with administrator credentials.</p>
+
+      <form onsubmit="handleAdminLogin(event)">
+        <label style="text-align: left;">Email</label>
+        <input type="email" id="adminEmail" required>
+
+        <label style="text-align: left;">Password</label>
+        <input type="password" id="adminPassword" required>
+
+        <div class="turnstile-wrapper">
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess" data-theme="dark"></div>
+        </div>
+
+        <button type="submit" class="btn btn-lime" style="width: 100%;"><i data-lucide="key"></i> Login to Admin Panel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADMIN DASHBOARD -->
+  <div id="adminDashboard" class="main-container hidden">
     
-    <!-- DESKTOP SIDEBAR -->
-    <aside class="desktop-sidebar">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
       <div>
-        <div class="sidebar-brand"><i data-lucide="shield"></i> Drozo Mind Therapy</div>
-        <ul class="nav-menu">
-          <li class="nav-item active" onclick="navigateTo('pageAdminTickets', this)"><i data-lucide="ticket"></i> <span>Session Requests</span></li>
-          <li class="nav-item" onclick="navigateTo('pageAdminSupport', this)"><i data-lucide="message-square"></i> <span>Support DMs</span></li>
-          <li class="nav-item" onclick="navigateTo('pageAdminUsers', this)"><i data-lucide="users"></i> <span>Users & Cooldowns</span></li>
-          <li class="nav-item portal-btn" onclick="window.location.href='index.html'"><i data-lucide="external-link"></i> <span>Client Portal</span></li>
-        </ul>
+        <h2 style="color: var(--accent-lime); display: flex; align-items: center; gap: 8px;"><i data-lucide="shield"></i> Admin Dashboard</h2>
+        <p style="color: var(--text-muted); font-size: 0.8rem;" id="adminEmailVal">admin@domain.com</p>
       </div>
-      <div>
-        <button onclick="handleSignOut()" class="btn btn-danger" style="width: 100%; font-size: 0.82rem;"><i data-lucide="log-out"></i> Sign Out</button>
+      <div style="display: flex; gap: 8px;">
+        <a href="index.html" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Client View</a>
+        <button onclick="handleSignOut()" class="btn btn-danger"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
-    </aside>
+    </div>
 
-    <!-- MOBILE BOTTOM NAVIGATION -->
-    <nav class="mobile-bottom-nav">
-      <div class="nav-item active" onclick="navigateTo('pageAdminTickets', this)"><i data-lucide="ticket"></i><span>Tickets</span></div>
-      <div class="nav-item" onclick="navigateTo('pageAdminSupport', this)"><i data-lucide="message-square"></i><span>Support</span></div>
-      <div class="nav-item" onclick="navigateTo('pageAdminUsers', this)"><i data-lucide="users"></i><span>Users</span></div>
-      <div class="nav-item" onclick="window.location.href='index.html'"><i data-lucide="external-link"></i><span>Portal</span></div>
-    </nav>
+    <!-- TICKET MANAGEMENT -->
+    <div class="card">
+      <div class="card-title"><i data-lucide="list"></i> Client Session Requests (Live)</div>
+      <div id="adminTicketList">
+        <p style="color: var(--text-muted);">Loading tickets...</p>
+      </div>
+    </div>
 
-    <main class="main-content">
-      <div>
-        <div class="top-header">
-          <h2 style="color: var(--accent-lime); font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="shield"></i> Drozo Mind Therapy - Admin
-          </h2>
-          <div style="font-size: 0.8rem;">
-            Admin: <strong id="adminEmailDisplay" style="color: var(--accent-lime);"></strong>
-          </div>
-        </div>
+    <!-- REAL-TIME LIVE CHAT CONSOLE -->
+    <div class="card">
+      <div class="card-title"><i data-lucide="message-square"></i> Live Client Support Console</div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">Select a user from the dropdown to chat with them live.</p>
 
-        <!-- PAGE 1: TICKETS -->
-        <div id="pageAdminTickets" class="page active-page">
-          <div class="card">
-            <h3><i data-lucide="ticket"></i> Session Tickets</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Ref ID</th>
-                    <th>User Email</th>
-                    <th>Requested Time</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="ticketsTableBody">
-                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading tickets...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+      <label>Select Client Conversation</label>
+      <select id="chatUserSelect" onchange="loadAdminSelectedChat()">
+        <option value="">-- Select a Client --</option>
+      </select>
 
-        <!-- PAGE 2: SUPPORT DMS -->
-        <div id="pageAdminSupport" class="page">
-          <div class="card">
-            <h3><i data-lucide="message-square"></i> Live Support Conversations</h3>
-            <div style="margin-bottom: 15px;">
-              <label>Select Client Conversation:</label>
-              <select id="userChatSelect" onchange="loadUserChatThread()">
-                <option value="">-- Choose client conversation --</option>
-              </select>
-            </div>
-
-            <div id="chatThreadContainer" class="hidden">
-              <div class="chat-box" id="adminChatContainer"></div>
-              
-              <form id="adminChatForm" onsubmit="sendAdminMessage(event)" style="display: flex; gap: 8px; margin-bottom: 10px;">
-                <input type="text" id="adminChatMessageInput" placeholder="Type response..." style="margin-bottom: 0;" required>
-                <button type="submit" class="btn btn-lime"><i data-lucide="send"></i></button>
-              </form>
-
-              <div style="display: flex; gap: 10px;">
-                <button onclick="closeSupportDM()" class="btn btn-warn" style="flex: 1;"><i data-lucide="lock"></i> Mark Resolved</button>
-                <button onclick="deleteSupportDMThread()" class="btn btn-danger" style="flex: 1;"><i data-lucide="trash-2"></i> Delete Thread</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- PAGE 3: USERS & COOLDOWNS -->
-        <div id="pageAdminUsers" class="page">
-          <div class="card">
-            <h3><i data-lucide="users"></i> User Accounts</h3>
-            <div class="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>User Email</th>
-                    <th>Role</th>
-                    <th>Cooldown Active</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Loading users...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
+      <div class="chat-box" id="adminChatContainer">
+        <p style="color: var(--text-muted); text-align: center; margin: auto;">Select a client above to open conversation.</p>
       </div>
 
-      <footer class="footer">
-        © 2026 The Drozo Mind-Therapy By Drozo. All rights reserved.
-      </footer>
-    </main>
+      <form onsubmit="sendAdminMessage(event)" style="display: flex; gap: 8px;">
+        <input type="text" id="adminChatMessageInput" placeholder="Type admin reply..." style="margin-bottom: 0;" required>
+        <button type="submit" class="btn btn-lime" style="white-space: nowrap;"><i data-lucide="send"></i> Reply</button>
+      </form>
+    </div>
+
+    <!-- ADD/PROMOTE ADMIN PANEL -->
+    <div class="card">
+      <div class="card-title"><i data-lucide="user-plus"></i> Promote User to Admin</div>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+        Enter an existing user's registered email address to grant them administrative access.
+      </p>
+      
+      <form onsubmit="promoteUserToAdmin(event)" style="display: flex; gap: 10px;">
+        <input type="email" id="promoteEmailInput" placeholder="user@gmail.com" style="margin-bottom: 0;" required>
+        <button type="submit" class="btn btn-lime" style="white-space: nowrap;"><i data-lucide="shield-check"></i> Make Admin</button>
+      </form>
+    </div>
+
   </div>
 
   <script>
@@ -250,17 +150,20 @@
     const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    let currentAdmin = null;
-    let selectedChatUserId = null;
-    let userEmailMap = {};
+    let currentAdminUser = null;
+    let turnstileToken = null;
+    let activeChatUserId = null;
+
+    window.onTurnstileSuccess = function(token) {
+      turnstileToken = token;
+    };
 
     function showToast(message, type = 'success') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
       toast.className = `toast toast-${type}`;
-      toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}"></i> <span>${message}</span>`;
+      toast.innerHTML = `<span>${message}</span>`;
       container.appendChild(toast);
-      lucide.createIcons();
       setTimeout(() => toast.classList.add('show'), 10);
       setTimeout(() => {
         toast.classList.remove('show');
@@ -268,214 +171,245 @@
       }, 4000);
     }
 
-    async function loadUserMap() {
-      const { data: profiles } = await supabaseClient.from('profiles').select('id, email');
-      if (profiles) {
-        profiles.forEach(p => {
-          if (p.email) userEmailMap[p.id] = p.email;
-        });
-      }
-    }
-
-    async function init() {
+    async function initAdmin() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
-        window.location.href = 'index.html';
+        document.getElementById('adminAuthPage').classList.remove('hidden');
+        document.getElementById('adminDashboard').classList.add('hidden');
         return;
       }
 
-      currentAdmin = session.user;
-      
-      const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentAdmin.id).single();
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
       if (!profile || profile.role !== 'admin') {
-        alert("Admin access required.");
-        window.location.href = 'index.html';
+        showToast("Access Denied: You do not have admin permissions.", "error");
+        await supabaseClient.auth.signOut();
         return;
       }
 
-      document.getElementById('adminEmailDisplay').innerText = currentAdmin.email;
-      
-      await loadUserMap();
-      fetchTickets();
-      fetchChatUsers();
-      fetchUsers();
-      setupRealtimeSubscriptions();
+      currentAdminUser = session.user;
+      document.getElementById('adminAuthPage').classList.add('hidden');
+      document.getElementById('adminDashboard').classList.remove('hidden');
+      document.getElementById('adminEmailVal').innerText = currentAdminUser.email;
+
+      fetchAdminTickets();
+      populateChatUserDropdown();
+      setupAdminRealtime();
       lucide.createIcons();
     }
 
-    function setupRealtimeSubscriptions() {
-      supabaseClient.channel('admin:tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchTickets()).subscribe();
-      
-      supabaseClient.channel('admin:chats')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
-          if (payload.new && payload.new.sender_role === 'user') {
-            await loadUserMap();
-            const senderEmail = userEmailMap[payload.new.user_id] || 'a client';
-            showToast(`💬 New support message from ${senderEmail}!`, 'success');
-          }
-          fetchChatUsers();
-          if (selectedChatUserId === payload.new.user_id) loadUserChatThread();
-        })
-        .subscribe();
-    }
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('adminEmail').value.trim();
+      const password = document.getElementById('adminPassword').value;
 
-    function navigateTo(pageId, navElement) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
-      document.getElementById(pageId).classList.add('active-page');
-      
-      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-      if (navElement) navElement.classList.add('active');
-
-      window.scrollTo(0, 0);
-      lucide.createIcons();
-    }
-
-    async function handleSignOut() {
-      await supabaseClient.auth.signOut();
-      window.location.href = 'index.html';
-    }
-
-    async function fetchTickets() {
-      await loadUserMap();
-      const { data: tickets } = await supabaseClient.from('tickets').select('*').order('created_at', { ascending: false });
-      const tbody = document.getElementById('ticketsTableBody');
-
-      if (!tickets || tickets.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No tickets found.</td></tr>`;
+      if (!turnstileToken) {
+        showToast("Please complete the CAPTCHA verification.", "error");
         return;
       }
 
-      tbody.innerHTML = tickets.map(t => {
-        const clientEmail = userEmailMap[t.user_id] || `${t.user_id.substring(0, 8)}...`;
-        const badgeClass = t.status === 'Closed' ? 'badge-closed' : (t.status === 'Scheduled' || t.status === 'Confirmed' ? 'badge-success' : 'badge-pending');
-        
-        return `
-          <tr>
-            <td><strong>${t.ticket_number}</strong></td>
-            <td><strong>${clientEmail}</strong></td>
-            <td style="font-size: 0.8rem;">${t.pref_time ? new Date(t.pref_time).toLocaleString() : 'N/A'}</td>
-            <td><span class="badge ${badgeClass}">${t.status}</span></td>
-            <td>
-              <div class="action-group">
-                <button onclick="offerTimeSlot('${t.id}')" class="btn btn-lime"><i data-lucide="clock"></i> Slot</button>
-                <button onclick="closeTicket('${t.id}')" class="btn btn-warn"><i data-lucide="check-circle"></i> Close</button>
-                <button onclick="deleteTicket('${t.id}')" class="btn btn-danger"><i data-lucide="trash-2"></i> Delete</button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
+      const activeToken = turnstileToken;
+      turnstileToken = null;
+
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password,
+        options: { captchaToken: activeToken }
+      });
+
+      if (error) {
+        showToast(error.message, "error");
+        if (window.turnstile) turnstile.reset();
+      } else {
+        initAdmin();
+      }
+    }
+
+    async function fetchAdminTickets() {
+      const { data: tickets, error } = await supabaseClient
+        .from('tickets')
+        .select('*, profiles(email)')
+        .order('created_at', { ascending: false });
+
+      const container = document.getElementById('adminTicketList');
+      if (error || !tickets || tickets.length === 0) {
+        container.innerHTML = `<p style="color: var(--text-muted); font-size: 0.85rem;">No ticket records found.</p>`;
+        return;
+      }
+
+      container.innerHTML = tickets.map(t => `
+        <div class="ticket-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong>${t.ticket_number}</strong>
+            <span class="badge">${t.status}</span>
+          </div>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">User: ${t.profiles?.email || t.user_id}</p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Current Slot: ${t.pref_time ? new Date(t.pref_time).toLocaleString() : 'N/A'}</p>
+          ${t.notes ? `<p style="font-size: 0.8rem; margin-top: 4px; color: #ccc;">Notes: ${t.notes}</p>` : ''}
+          
+          <hr style="border-color: var(--card-border); margin: 12px 0;">
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="margin-bottom:0;">Offer / Change Time Slot:</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="datetime-local" id="slot_${t.id}" style="margin-bottom:0; flex:1;">
+              <button onclick="offerTimeSlot('${t.id}')" class="btn btn-lime">Offer Slot</button>
+            </div>
+            
+            <div style="display: flex; gap: 8px; margin-top: 6px;">
+              <button onclick="updateStatus('${t.id}', 'Confirmed')" class="btn btn-secondary"><i data-lucide="check-circle"></i> Mark Confirmed</button>
+              <button onclick="updateStatus('${t.id}', 'Closed')" class="btn btn-danger"><i data-lucide="x-circle"></i> Close Ticket</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
       lucide.createIcons();
     }
 
     async function offerTimeSlot(ticketId) {
-      const time = prompt("Enter Date & Time (YYYY-MM-DD HH:MM):");
-      if (!time) return;
+      const input = document.getElementById(`slot_${ticketId}`);
+      if (!input.value) {
+        showToast("Please select a date and time to offer.", "error");
+        return;
+      }
 
-      await supabaseClient.from('tickets').update({ offered_time: new Date(time).toISOString(), status: 'Time Slot Offered' }).eq('id', ticketId);
-      showToast("Time slot offered!");
-      fetchTickets();
+      const { error } = await supabaseClient
+        .from('tickets')
+        .update({ 
+          pref_time: new Date(input.value).toISOString(),
+          status: 'Time Slot Offered'
+        })
+        .eq('id', ticketId);
+
+      if (error) showToast(error.message, "error");
+      else {
+        showToast("Time slot offered to client!");
+        fetchAdminTickets();
+      }
     }
 
-    async function closeTicket(ticketId) {
-      await supabaseClient.from('tickets').update({ status: 'Closed' }).eq('id', ticketId);
-      showToast("Session ticket closed.");
-      fetchTickets();
+    async function updateStatus(ticketId, newStatus) {
+      const { error } = await supabaseClient
+        .from('tickets')
+        .update({ status: newStatus })
+        .eq('id', ticketId);
+
+      if (error) showToast(error.message, "error");
+      else {
+        showToast(`Ticket status updated to ${newStatus}`);
+        fetchAdminTickets();
+      }
     }
 
-    async function deleteTicket(ticketId) {
-      if (!confirm("Are you sure you want to permanently delete this ticket?")) return;
-      await supabaseClient.from('tickets').delete().eq('id', ticketId);
-      showToast("Ticket deleted.");
-      fetchTickets();
+    async function populateChatUserDropdown() {
+      const { data: profiles } = await supabaseClient
+        .from('profiles')
+        .select('id, email')
+        .neq('role', 'admin');
+
+      const select = document.getElementById('chatUserSelect');
+      select.innerHTML = '<option value="">-- Select a Client --</option>';
+      if (profiles) {
+        profiles.forEach(p => {
+          select.innerHTML += `<option value="${p.id}">${p.email}</option>`;
+        });
+      }
     }
 
-    async function fetchChatUsers() {
-      await loadUserMap();
-      const { data } = await supabaseClient.from('chat_messages').select('user_id');
-      const select = document.getElementById('userChatSelect');
-      if (!data) return;
-      
-      const uniqueUsers = [...new Set(data.map(i => i.user_id))];
-      
-      select.innerHTML = `<option value="">-- Choose client conversation (${uniqueUsers.length}) --</option>`;
-      uniqueUsers.forEach(uid => {
-        const opt = document.createElement('option');
-        opt.value = uid;
-        opt.textContent = userEmailMap[uid] ? `Client: ${userEmailMap[uid]}` : `User: ${uid.substring(0, 8)}...`;
-        select.appendChild(opt);
-      });
-      if (selectedChatUserId) select.value = selectedChatUserId;
-    }
+    async function loadAdminSelectedChat() {
+      activeChatUserId = document.getElementById('chatUserSelect').value;
+      if (!activeChatUserId) return;
 
-    async function loadUserChatThread() {
-      selectedChatUserId = document.getElementById('userChatSelect').value;
-      const container = document.getElementById('chatThreadContainer');
-      if (!selectedChatUserId) { container.classList.add('hidden'); return; }
+      const { data: messages } = await supabaseClient
+        .from('chat_messages')
+        .select('*')
+        .eq('user_id', activeChatUserId)
+        .order('created_at', { ascending: true });
 
-      container.classList.remove('hidden');
-      const { data: messages } = await supabaseClient.from('chat_messages').select('*').eq('user_id', selectedChatUserId).order('created_at', { ascending: true });
-      const box = document.getElementById('adminChatContainer');
-
-      box.innerHTML = (messages || []).map(m => `
-        <div class="chat-msg ${m.sender_role}">
-          <strong>${m.sender_role === 'admin' ? 'You' : (userEmailMap[selectedChatUserId] || 'Client')}:</strong> ${m.message}
-        </div>
-      `).join('');
-      box.scrollTop = box.scrollHeight;
+      const container = document.getElementById('adminChatContainer');
+      if (messages && messages.length > 0) {
+        container.innerHTML = messages.map(m => `
+          <div class="chat-msg ${m.sender_role === 'admin' ? 'admin' : 'user'}">
+            ${m.message}
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; margin: auto;">No messages yet with this client.</p>`;
+      }
+      container.scrollTop = container.scrollHeight;
     }
 
     async function sendAdminMessage(e) {
       e.preventDefault();
+      if (!activeChatUserId) {
+        showToast("Please select a client to chat with first.", "error");
+        return;
+      }
+
       const input = document.getElementById('adminChatMessageInput');
-      if (!selectedChatUserId || !input.value) return;
+      if (!input.value) return;
 
-      await supabaseClient.from('chat_messages').insert([{ user_id: selectedChatUserId, sender_role: 'admin', message: input.value, status: 'accepted' }]);
+      await supabaseClient.from('chat_messages').insert([{
+        user_id: activeChatUserId,
+        sender_role: 'admin',
+        message: input.value,
+        status: 'replied'
+      }]);
+
       input.value = '';
-      loadUserChatThread();
+      loadAdminSelectedChat();
     }
 
-    async function closeSupportDM() {
-      if (!selectedChatUserId) return;
-      await supabaseClient.from('chat_messages').insert([{ user_id: selectedChatUserId, sender_role: 'admin', message: "🔒 [Support DM Closed]", status: 'closed_by_admin' }]);
-      showToast("Marked support thread as resolved.");
-      loadUserChatThread();
+    async function promoteUserToAdmin(e) {
+      e.preventDefault();
+      const email = document.getElementById('promoteEmailInput').value.trim();
+
+      const { error } = await supabaseClient
+        .from('profiles')
+        .update({ role: 'admin' })
+        .eq('email', email);
+
+      if (error) {
+        showToast(error.message, "error");
+      } else {
+        showToast(`Successfully granted admin privileges to ${email}!`);
+        document.getElementById('promoteEmailInput').value = '';
+      }
     }
 
-    async function deleteSupportDMThread() {
-      if (!selectedChatUserId) return;
-      if (!confirm("Are you sure you want to delete this entire chat conversation?")) return;
+    // REAL-TIME WEBSOCKET LISTENERS
+    function setupAdminRealtime() {
+      supabaseClient
+        .channel('admin-realtime-tickets')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+          fetchAdminTickets();
+          showToast("New ticket or booking status change detected!", "success");
+        })
+        .subscribe();
 
-      await supabaseClient.from('chat_messages').delete().eq('user_id', selectedChatUserId);
-      showToast("Chat thread deleted.");
-      selectedChatUserId = null;
-      document.getElementById('chatThreadContainer').classList.add('hidden');
-      fetchChatUsers();
+      supabaseClient
+        .channel('admin-realtime-chats')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+          populateChatUserDropdown();
+          if (activeChatUserId) {
+            loadAdminSelectedChat();
+          }
+          showToast("New chat message received!", "success");
+        })
+        .subscribe();
     }
 
-    async function fetchUsers() {
-      const { data: profiles } = await supabaseClient.from('profiles').select('*');
-      const tbody = document.getElementById('usersTableBody');
-      if (!profiles) return;
-
-      tbody.innerHTML = profiles.map(u => `
-        <tr>
-          <td><strong>${u.email || u.id}</strong></td>
-          <td><span class="badge ${u.role === 'admin' ? 'badge-success' : 'badge-pending'}">${u.role ? u.role.toUpperCase() : 'USER'}</span></td>
-          <td>${u.cooldown_until ? new Date(u.cooldown_until).toLocaleTimeString() : 'None'}</td>
-          <td><button onclick="clearCooldown('${u.id}')" class="btn btn-lime"><i data-lucide="refresh-cw"></i> Clear Cooldown</button></td>
-        </tr>
-      `).join('');
-      lucide.createIcons();
+    async function handleSignOut() {
+      await supabaseClient.auth.signOut();
+      window.location.reload();
     }
 
-    async function clearCooldown(id) {
-      await supabaseClient.from('profiles').update({ cooldown_until: null }).eq('id', id);
-      showToast("Cleared user cooldown!");
-      fetchUsers();
-    }
-
-    init();
+    initAdmin();
   </script>
 </body>
 </html>
