@@ -98,7 +98,6 @@
     .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
     .btn-demote:hover { background-color: var(--warning); color: #000; }
 
-    /* LAYOUT & CHAT FIXES */
     .chat-layout { 
       display: grid; 
       grid-template-columns: 320px 1fr; 
@@ -678,7 +677,7 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Sync database status for this specific user only so refresh won't trigger unread state again
+    // Sync database status for this specific user only
     try {
       await supabaseClient
         .from('chat_messages')
