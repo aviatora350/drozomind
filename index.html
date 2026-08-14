@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Drozo-Mind Therapy - Client Portal</title>
+  <title>Drozo Mind Therapy - Client Portal</title>
   
   <!-- Fonts & Icons -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +20,8 @@
       --accent-lime: #a3e635;
       --accent-lime-hover: #84cc16;
       --accent-lime-glow: rgba(163, 230, 53, 0.15);
+      --discord-purple: #5865F2;
+      --discord-purple-hover: #4752C4;
       --text-primary: #f4f4f5;
       --text-muted: #a1a1aa;
     }
@@ -50,13 +52,12 @@
 
     .main-container { padding: 16px; max-width: 600px; margin: 0 auto; width: 100%; z-index: 1; position: relative; }
 
-    /* HEADER & ADMIN SWITCHER CARD */
     .user-header-card {
       background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border);
       border-radius: 14px; padding: 14px 18px; margin-bottom: 16px;
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
     }
-    .header-title { font-size: 1.1rem; font-weight: 700; color: var(--accent-lime); display: flex; align-items: center; gap: 8px; }
+    .header-title { font-size: 1.05rem; font-weight: 700; color: var(--accent-lime); display: flex; align-items: center; gap: 8px; }
     .header-email { font-size: 0.78rem; color: var(--text-muted); word-break: break-all; margin-top: 2px; }
     
     .admin-switch-btn {
@@ -71,7 +72,6 @@
     .card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #fff; }
     .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
 
-    /* PIPELINE TRACKER */
     .pipeline-container { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; margin-bottom: 16px; position: relative; }
     .pipeline-step { display: flex; align-items: center; gap: 12px; position: relative; font-size: 0.88rem; font-weight: 600; color: var(--text-muted); }
     .pipeline-step.active { color: var(--accent-lime); }
@@ -86,27 +86,32 @@
       border-radius: 12px; padding: 14px; margin-top: 10px; font-size: 0.85rem;
     }
 
-    /* FORM STYLES */
+    .discord-box {
+      margin-top: 14px; padding: 16px; border-radius: 12px;
+      background: rgba(88, 101, 242, 0.12); border: 1px solid var(--discord-purple);
+      text-align: center;
+    }
+
     label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
     input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 16px; color: #ffffff; color-scheme: dark; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
 
-    .btn { padding: 12px 18px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; width: 100%; }
+    .btn { padding: 12px 18px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; width: 100%; text-decoration: none; }
     .btn-lime { background: var(--accent-lime); color: #000000; }
     .btn-lime:hover { background: var(--accent-lime-hover); }
+    .btn-discord { background: var(--discord-purple); color: #ffffff; }
+    .btn-discord:hover { background: var(--discord-purple-hover); }
     .btn-danger { background: #ef4444; color: white; }
 
-    /* CHAT BOX */
     .chat-box { height: 280px; border: 1px solid var(--card-border); border-radius: 12px; padding: 12px; overflow-y: auto; background: #000000; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
     .chat-msg { max-width: 85%; padding: 10px 14px; border-radius: 12px; font-size: 0.88rem; line-height: 1.4; word-break: break-word; }
     .chat-msg.user { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; border-bottom-right-radius: 2px; }
     .chat-msg.admin { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 2px; }
 
-    /* BOTTOM NAVIGATION BAR */
     .mobile-bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
       background: #09090b; border-top: 1px solid var(--card-border);
-      z-index: 9999; display: flex; justify-content: space-around; align-items: center;
+      z-index: 9999; display: flex; justify-space-around: align-items: center;
       padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
     }
     .nav-tab {
@@ -121,6 +126,7 @@
     .page.active-page { display: block; animation: fadeIn 0.2s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
+    .footer { text-align: center; padding: 20px 0; font-size: 0.78rem; color: var(--text-muted); margin-top: 20px; }
     .hidden { display: none !important; }
   </style>
 </head>
@@ -133,7 +139,7 @@
   <div id="authPage" class="main-container">
     <div class="card" style="margin-top: 40px; text-align: center;">
       <h2 style="color: var(--accent-lime); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        <i data-lucide="sparkles"></i> Drozo-Mind
+        <i data-lucide="sparkles"></i> Drozo Mind Therapy
       </h2>
       <p class="card-desc">Sign in or register to schedule and manage your therapy sessions.</p>
       
@@ -152,13 +158,11 @@
   <!-- CLIENT DASHBOARD -->
   <div id="appPage" class="main-container hidden">
     
-    <!-- TOP HEADER -->
     <div class="user-header-card">
       <div>
-        <div class="header-title"><i data-lucide="grid"></i> Drozo Dashboard</div>
+        <div class="header-title"><i data-lucide="heart-pulse"></i> Drozo Mind Therapy</div>
         <div class="header-email" id="userEmailDisplay">loading...</div>
       </div>
-      <!-- ADMIN SWITCH BUTTON -->
       <button id="adminPanelBtn" onclick="window.location.href='admin.html'" class="admin-switch-btn hidden">
         <i data-lucide="shield"></i> Admin Panel
       </button>
@@ -167,7 +171,7 @@
     <!-- TAB 1: OVERVIEW -->
     <div id="tabOverview" class="page active-page">
       <div class="card">
-        <div class="card-title"><i data-lucide="sparkles" style="color: var(--accent-lime);"></i> Welcome to Drozo-Mind</div>
+        <div class="card-title"><i data-lucide="sparkles" style="color: var(--accent-lime);"></i> Welcome to Drozo Mind Therapy</div>
         <p class="card-desc">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</p>
       </div>
 
@@ -201,7 +205,7 @@
     <div id="tabSupport" class="page">
       <div class="card">
         <div class="card-title"><i data-lucide="message-square"></i> Live Support Chat</div>
-        <p class="card-desc">Direct line to Drozo-Mind support for session help or inquiries.</p>
+        <p class="card-desc">Direct line to Drozo Mind Therapy support for session help or inquiries.</p>
         
         <div class="chat-box" id="userChatContainer"></div>
 
@@ -234,6 +238,10 @@
       </div>
     </div>
 
+    <footer class="footer">
+      © 2026 The Drozo Mind-Therapy By Drozo. All rights reserved.
+    </footer>
+
   </div>
 
   <!-- NAVIGATION BAR -->
@@ -249,6 +257,9 @@
     const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Your Direct Discord Server Invite Link
+    const DISCORD_INVITE_URL = "https://discord.com/invite/ChmhSPy6RR";
 
     let currentUser = null;
 
@@ -266,6 +277,14 @@
       }, 4000);
     }
 
+    async function syncUserProfile() {
+      if (!currentUser) return;
+      await supabaseClient.from('profiles').upsert({
+        id: currentUser.id,
+        email: currentUser.email
+      }, { onConflict: 'id' });
+    }
+
     async function init() {
       const { data: { session } } = await supabaseClient.auth.getSession();
       if (!session) {
@@ -274,6 +293,8 @@
         document.getElementById('bottomNav').classList.add('hidden');
       } else {
         currentUser = session.user;
+        await syncUserProfile();
+
         document.getElementById('authPage').classList.add('hidden');
         document.getElementById('appPage').classList.remove('hidden');
         document.getElementById('bottomNav').classList.remove('hidden');
@@ -355,8 +376,21 @@
       }
 
       const activeTicket = tickets[0];
-      const statusMap = { 'Submitted': 1, 'Time Slot Offered': 2, 'Scheduled': 3, 'Confirmed': 4 };
+      const statusMap = { 'Submitted': 1, 'Time Slot Offered': 2, 'Scheduled': 3, 'Confirmed': 4, 'Closed': 4 };
       const currentStep = statusMap[activeTicket.status] || 1;
+
+      // Render Discord box when status is Scheduled, Confirmed, or Closed
+      const isConfirmedOrScheduled = (activeTicket.status === 'Confirmed' || activeTicket.status === 'Scheduled' || activeTicket.status === 'Closed');
+
+      const discordBlock = `
+        <div class="discord-box">
+          <p style="font-weight: 700; color: #fff; margin-bottom: 6px; font-size: 0.88rem;">🎉 Session Confirmed & Scheduled!</p>
+          <p style="color: var(--text-muted); font-size: 0.78rem; margin-bottom: 12px;">Join our official Discord server to attend your live session.</p>
+          <a href="${DISCORD_INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-discord">
+            <i data-lucide="message-square"></i> Join Discord Server
+          </a>
+        </div>
+      `;
 
       pipelineContainer.innerHTML = `
         <div class="pipeline-step ${currentStep >= 1 ? 'active' : ''}">
@@ -373,7 +407,7 @@
         </div>
         <div class="pipeline-step ${currentStep >= 4 ? 'active' : ''}">
           <div class="step-icon"><i data-lucide="${currentStep >= 4 ? 'check' : 'circle'}"></i></div>
-          <span>4. Confirmed</span>
+          <span>4. ${activeTicket.status === 'Closed' ? 'Closed' : 'Confirmed'}</span>
         </div>
 
         <div class="ticket-info-card">
@@ -383,6 +417,8 @@
             Slot: ${activeTicket.pref_time ? new Date(activeTicket.pref_time).toLocaleString() : 'Pending Confirmation'}
           </p>
         </div>
+
+        ${isConfirmedOrScheduled ? discordBlock : ''}
       `;
 
       historyList.innerHTML = tickets.map(t => `
@@ -394,6 +430,11 @@
           <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.8rem;">
             ${new Date(t.created_at).toLocaleDateString()}
           </p>
+          ${(t.status === 'Confirmed' || t.status === 'Scheduled') ? `
+            <a href="${DISCORD_INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-discord" style="margin-top: 10px; padding: 8px 12px; font-size: 0.78rem;">
+              <i data-lucide="message-square"></i> Join Discord
+            </a>
+          ` : ''}
         </div>
       `).join('');
 
