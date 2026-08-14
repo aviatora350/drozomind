@@ -573,7 +573,16 @@
 
   /* ------------------- DIRECT MESSAGES ------------------- */
   async function loadDMs() {
-    const { data: msgs } = await supabaseClient.from('chat_messages').select('*').order('created_at', { ascending: true });
+    const { data: msgs, error } = await supabaseClient
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error("Error loading DMs:", error);
+      return;
+    }
+
     allMessages = msgs || [];
 
     renderThreads();
@@ -598,7 +607,7 @@
         ...profileUserIds
       ]));
 
-      // Sort users: Most recent message activity first
+      // Sort threads by recent message activity
       allUserIds.sort((a, b) => {
         const msgsA = userMap[a] || [];
         const msgsB = userMap[b] || [];
@@ -620,11 +629,17 @@
         const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         const userEmailDisplay = getUserEmail(uId);
 
-        // FIXED: Green dot strictly appears if user has an unread message AND is not currently open
-        const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.user_id === uId && m.sender_role === 'user' && m.status === 'unread');
+        // Green dot strictly appears if user has an unread message AND thread is NOT currently selected
+        const isSelected = (activeChatUserId === uId);
+        const hasUnread = !isSelected && msgs.some(m => 
+          m && 
+          m.user_id === uId && 
+          m.sender_role === 'user' && 
+          m.status !== 'read'
+        );
 
         const item = document.createElement('div');
-        item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
+        item.className = `thread-item ${isSelected ? 'active' : ''}`;
         item.setAttribute('data-user-id', uId);
         item.onclick = () => selectThread(uId);
         item.innerHTML = `
@@ -653,7 +668,7 @@
     if (input) input.disabled = false;
     if (sendBtn) sendBtn.disabled = false;
 
-    // Immediately mark unread messages for THIS specific user as read in local memory
+    // Immediately mark unread messages for THIS specific user as read in local state
     allMessages.forEach(m => {
       if (m && m.user_id === userId && m.sender_role === 'user') {
         m.status = 'read';
@@ -663,16 +678,15 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Sync database status for this specific user only
+    // Sync database status for this specific user only so refresh won't trigger unread state again
     try {
       await supabaseClient
         .from('chat_messages')
         .update({ status: 'read' })
         .eq('user_id', userId)
-        .eq('sender_role', 'user')
-        .eq('status', 'unread');
+        .eq('sender_role', 'user');
     } catch (err) {
-      console.error("Failed marking unread messages as read:", err);
+      console.error("Failed marking unread messages as read in DB:", err);
     }
 
     if (input) setTimeout(() => input.focus(), 50);
@@ -718,13 +732,11 @@
       sendBtn.disabled = true;
       input.value = '';
 
-      const initialStatus = (activeChatUserId === currentAdminId) ? 'read' : 'unread';
-
       const { data, error } = await supabaseClient.from('chat_messages').insert([{
         user_id: activeChatUserId,
         sender_role: 'admin',
         message: msg,
-        status: initialStatus
+        status: 'read'
       }]).select('*').single();
 
       if (error) {
@@ -732,7 +744,6 @@
         return;
       }
 
-      // Add directly to local memory array without re-querying the whole database
       if (data) {
         allMessages.push(data);
       }
@@ -758,9 +769,9 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
         const newMsg = payload.new;
-        if (!newMsg) return;
+        if (!newMsg || !newMsg.user_id) return;
 
-        // Push new incoming message directly to local array
+        // Push new incoming message into local array
         const existingIdx = allMessages.findIndex(m => m.id === newMsg.id);
         if (existingIdx === -1) {
           allMessages.push(newMsg);
@@ -768,15 +779,16 @@
           allMessages[existingIdx] = newMsg;
         }
 
-        // If open in active chat, mark read immediately
-        if (activeChatUserId && newMsg.user_id === activeChatUserId && newMsg.sender_role === 'user') {
-          newMsg.status = 'read';
+        // If message arrives for active chat window, mark read automatically
+        if (activeChatUserId && newMsg.user_id === activeChatUserId) {
+          if (newMsg.sender_role === 'user') {
+            newMsg.status = 'read';
+            await supabaseClient
+              .from('chat_messages')
+              .update({ status: 'read' })
+              .eq('id', newMsg.id);
+          }
           renderChatWindow(activeChatUserId);
-          
-          await supabaseClient
-            .from('chat_messages')
-            .update({ status: 'read' })
-            .eq('id', newMsg.id);
         }
 
         renderThreads();
