@@ -820,6 +820,7 @@
     loadMyTickets();
   }
 
+  // CLIENT COUNTER-PROPOSE: Exclusively increments the counter and evaluates limits
   async function proposeNewTime(ticketId, currentCount) {
     const rawVal = document.getElementById('counter-time-input').value;
     if (!rawVal) return alert("Select date and time first.");
@@ -830,26 +831,26 @@
     const isoTime = dateObj.toISOString();
     const newCount = (currentCount || 0) + 1;
 
-    // CANCEL ONLY ON THE 3rd COUNTER-OFFER ATTEMPT
+    // STEP 5 / HARD STOP: Auto-cancel on 3rd client attempt
     if (newCount >= 3) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
-        admin_comment: 'Auto-cancelled: Reached maximum slot change limit (3 attempts).',
+        admin_comment: 'Auto-cancelled: Client reached maximum slot change limit (3 attempts).',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      alert("Session cancelled automatically because maximum change attempts (3) were reached.");
+      alert("Session cancelled automatically because your maximum slot change attempts (3) were reached.");
       loadMyTickets();
       return;
     }
 
-    // SHOW WARNING ON THE 2nd COUNTER-OFFER ATTEMPT
+    // STEP 3 / WARNING: Show warning banner modal on 2nd client attempt
     if (newCount === 2) {
       pendingNegotiation = { ticketId, isoTime, newCount };
       document.getElementById('negotiation-warning-modal').style.display = 'flex';
       return;
     }
 
-    // FIRST COUNTER-OFFER ATTEMPT
+    // STEP 1 / FIRST COUNTER
     await executeProposal(ticketId, isoTime, newCount);
   }
 
