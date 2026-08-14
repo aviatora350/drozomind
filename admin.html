@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drozo Mind Therapy - Admin Panel</title>
+  <title>Drozo Mind - Therapy - Admin Panel</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -29,6 +29,28 @@
 
     header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); }
     .logo-title { font-size: 22px; font-weight: 700; color: var(--primary); }
+    
+    .connection-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.3s ease;
+    }
+    .connection-badge.connecting {
+      color: var(--warning);
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid var(--warning);
+    }
+    .connection-badge.connected {
+      color: var(--primary);
+      background: rgba(155, 240, 11, 0.12);
+      border: 1px solid var(--primary);
+    }
+
     .btn-portal { background: transparent; color: var(--text-main); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; cursor: pointer; }
 
     .tab-nav { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; flex-wrap: wrap; }
@@ -99,7 +121,8 @@
 <div class="container">
   <header>
     <div style="display: flex; align-items: center; gap: 16px;">
-      <div class="logo-title">🛡️ Drozo Mind Therapy - Admin Panel</div>
+      <div class="logo-title">🛡️ Drozo Mind - Therapy - Admin Panel</div>
+      <span id="admin-connection-status" class="connection-badge connecting">🟡 Connecting...</span>
       <a href="index.html" class="btn-portal">← Client Portal</a>
     </div>
     <button class="btn-portal" style="border-color: var(--danger); color: var(--danger);" onclick="adminSignOut()">Sign Out</button>
@@ -166,7 +189,6 @@
   async function init() {
     const { data: { session } } = await supabaseClient.auth.getSession();
 
-    // STRICT ROLE ACCESS GUARD: Kick non-admins immediately
     if (!session) {
       alert("Access Denied: Please sign in through the Client Portal first.");
       window.location.href = "index.html";
@@ -250,7 +272,7 @@
           </div>
         </div>
         <div class="details-grid" style="margin-bottom:0;">
-          <div><span>User ID</span><code style="font-size:11px;">${user.id}</code></div>
+          <div><span>Email ID</span><strong style="color: var(--primary);">${user.email || 'No Email Provided'}</strong></div>
           <div><span>System Role</span><strong>${user.role || 'user'}</strong></div>
         </div>
       `;
@@ -275,7 +297,7 @@
       alert("Failed to update role: " + error.message);
     } else {
       await loadUsers();
-      renderTickets(); // Refresh emails/names if needed
+      renderTickets();
     }
   }
 
@@ -290,7 +312,7 @@
   function updateTicketStats() {
     document.getElementById('stat-total').innerText = allTickets.length;
     document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('submit')).length;
-    document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted').length;
+    document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted' || t.status === 'Confirmed').length;
     document.getElementById('stat-closed').innerText = allTickets.filter(t => t.status === 'Closed' || t.status === 'Cancelled').length;
   }
 
@@ -320,7 +342,7 @@
         </div>
 
         <div class="details-grid">
-          <div><span>Client Email</span>${userEmail}</div>
+          <div><span>Client Email ID</span><strong style="color:var(--primary);">${userEmail}</strong></div>
           <div><span>Requested Time</span><strong>${ticket.pref_time || 'N/A'}</strong></div>
           <div><span>Offered Slot</span><strong>${ticket.offered_time || 'None'}</strong></div>
           <div><span>Confirmed Time</span><strong style="color: var(--primary);">${ticket.accepted_time || 'Not Confirmed'}</strong></div>
@@ -478,11 +500,21 @@
 
   /* ------------------- REALTIME SUBSCRIPTIONS ------------------- */
   function setupRealtime() {
+    const connBadge = document.getElementById('admin-connection-status');
+
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadDMs())
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          connBadge.className = 'connection-badge connected';
+          connBadge.innerHTML = '🟢 Connected';
+        } else {
+          connBadge.className = 'connection-badge connecting';
+          connBadge.innerHTML = '🟡 Connecting...';
+        }
+      });
   }
 
   init();
