@@ -98,21 +98,21 @@
     .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
     .btn-demote:hover { background-color: var(--warning); color: #000; }
 
-    .chat-layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; height: 560px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
-    .user-threads { border-right: 1px solid var(--card-border); display: flex; flex-direction: column; }
-    .threads-scroll { overflow-y: auto; flex: 1; }
+    .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 580px; min-height: 500px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
+    .user-threads { border-right: 1px solid var(--card-border); display: flex; flex-direction: column; height: 100%; min-width: 0; background: var(--card-bg); }
+    .threads-scroll { overflow-y: auto; flex: 1; min-height: 0; }
     .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
     .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
-    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); }
+    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); word-break: break-all; }
     .thread-preview { font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 
     .green-dot { width: 9px; height: 9px; background-color: var(--primary); border-radius: 50%; box-shadow: 0 0 8px var(--primary); flex-shrink: 0; }
 
-    .chat-window { display: flex; flex-direction: column; justify-content: space-between; }
+    .chat-window { display: flex; flex-direction: column; justify-content: space-between; height: 100%; min-width: 0; background: var(--card-bg); }
     .chat-messages { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
-    .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; font-size: 13px; }
-    .chat-bubble.user { background: var(--input-bg); border: 1px solid var(--card-border); align-self: flex-start; color: var(--text-main); }
-    .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: var(--primary-text); font-weight: 600; }
+    .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.4; word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap; }
+    .chat-bubble.user { background: #1c1c24; border: 1px solid var(--card-border); align-self: flex-start; color: #ffffff; }
+    .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: #050505; font-weight: 600; }
     .chat-input-row { padding: 14px; border-top: 1px solid var(--card-border); display: flex; gap: 12px; background: var(--input-bg); }
 
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
@@ -205,9 +205,10 @@
   }
 
   function getUserEmail(userId) {
-    const profile = allProfiles.find(p => p.id === userId);
+    if (!userId) return 'Unknown User';
+    const profile = allProfiles.find(p => p && p.id === userId);
     if (profile && profile.email) return profile.email;
-    return `User (${userId ? userId.substring(0, 8) : 'Unknown'}...)`;
+    return `User (${userId.substring(0, 8)}...)`;
   }
 
   async function init() {
@@ -276,6 +277,7 @@
     
     selector.innerHTML = '<option value="">-- Select Account / Self --</option>';
     allProfiles.forEach(p => {
+      if (!p || !p.id) return;
       const isSelf = p.id === currentAdminId;
       const opt = document.createElement('option');
       opt.value = p.id;
@@ -493,10 +495,9 @@
     const { data: msgs } = await supabaseClient.from('chat_messages').select('*').order('created_at', { ascending: true });
     allMessages = msgs || [];
 
-    // Clear unread in memory for currently active chat
     if (activeChatUserId) {
       allMessages.forEach(m => {
-        if (m.user_id === activeChatUserId && m.sender_role === 'user') {
+        if (m && m.user_id === activeChatUserId && m.sender_role === 'user') {
           m.status = 'read';
         }
       });
@@ -509,44 +510,51 @@
   function renderThreads() {
     const container = document.getElementById('threads-list');
     if (!container) return;
-    container.innerHTML = '';
 
-    const userMap = {};
-    allMessages.forEach(m => {
-      if (!userMap[m.user_id]) userMap[m.user_id] = [];
-      userMap[m.user_id].push(m);
-    });
+    try {
+      const userMap = {};
+      allMessages.forEach(m => {
+        if (!m || !m.user_id) return;
+        if (!userMap[m.user_id]) userMap[m.user_id] = [];
+        userMap[m.user_id].push(m);
+      });
 
-    const allUserIds = Array.from(new Set([
-      ...Object.keys(userMap),
-      ...allProfiles.map(p => p.id)
-    ]));
+      const profileUserIds = allProfiles.map(p => p && p.id).filter(Boolean);
+      const allUserIds = Array.from(new Set([
+        ...Object.keys(userMap),
+        ...profileUserIds
+      ]));
 
-    if (allUserIds.length === 0) {
-      container.innerHTML = `<div class="empty-state">No chat messages yet. Select a user from the dropdown above.</div>`;
-      return;
+      container.innerHTML = '';
+
+      if (allUserIds.length === 0) {
+        container.innerHTML = `<div class="empty-state">No chat messages yet. Select a user from the dropdown above.</div>`;
+        return;
+      }
+
+      allUserIds.forEach(uId => {
+        if (!uId) return;
+        const msgs = userMap[uId] || [];
+        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+        const userEmailDisplay = getUserEmail(uId);
+
+        const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.sender_role === 'user' && m.status === 'unread');
+
+        const item = document.createElement('div');
+        item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
+        item.onclick = () => selectThread(uId);
+        item.innerHTML = `
+          <div style="overflow: hidden; flex: 1;">
+            <div class="thread-email" title="${userEmailDisplay}">${userEmailDisplay}</div>
+            <div class="thread-preview">${lastMsg && lastMsg.message ? lastMsg.message : 'No messages yet'}</div>
+          </div>
+          ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
+        `;
+        container.appendChild(item);
+      });
+    } catch (err) {
+      console.error("Error rendering threads:", err);
     }
-
-    allUserIds.forEach(uId => {
-      const msgs = userMap[uId] || [];
-      const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-      const userEmailDisplay = getUserEmail(uId);
-
-      // Green Dot Rule: Only show if NOT active chat AND there are unread user messages
-      const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m.sender_role === 'user' && m.status === 'unread');
-
-      const item = document.createElement('div');
-      item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
-      item.onclick = () => selectThread(uId);
-      item.innerHTML = `
-        <div style="overflow: hidden; flex: 1;">
-          <div class="thread-email" title="${userEmailDisplay}">${userEmailDisplay}</div>
-          <div class="thread-preview">${lastMsg ? lastMsg.message : 'No messages yet'}</div>
-        </div>
-        ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
-      `;
-      container.appendChild(item);
-    });
   }
 
   async function selectThread(userId) {
@@ -556,15 +564,13 @@
     const selector = document.getElementById('user-chat-selector');
     if (selector) selector.value = userId;
 
-    // Enable inputs
     const input = document.getElementById('admin-chat-input');
     const sendBtn = document.getElementById('admin-send-btn');
     if (input) input.disabled = false;
     if (sendBtn) sendBtn.disabled = false;
 
-    // Clear unread in local state immediately for selected thread
     allMessages.forEach(m => {
-      if (m.user_id === userId) {
+      if (m && m.user_id === userId && m.sender_role === 'user') {
         m.status = 'read';
       }
     });
@@ -572,21 +578,31 @@
     renderThreads();
     renderChatWindow(userId);
 
-    // Update database
-    await supabaseClient
-      .from('chat_messages')
-      .update({ status: 'read' })
-      .eq('user_id', userId)
-      .eq('sender_role', 'user')
-      .eq('status', 'unread');
+    try {
+      await supabaseClient
+        .from('chat_messages')
+        .update({ status: 'read' })
+        .eq('user_id', userId)
+        .eq('sender_role', 'user')
+        .eq('status', 'unread');
+    } catch (err) {
+      console.error("Failed marking unread messages as read:", err);
+    }
 
     if (input) setTimeout(() => input.focus(), 50);
   }
 
   function renderChatWindow(userId) {
     const container = document.getElementById('chat-messages-container');
+    if (!container) return;
     container.innerHTML = '';
-    const userMsgs = allMessages.filter(m => m.user_id === userId);
+
+    if (!userId) {
+      container.innerHTML = `<div class="empty-state">Select a user or conversation thread to view messages.</div>`;
+      return;
+    }
+
+    const userMsgs = allMessages.filter(m => m && m.user_id === userId);
 
     if (userMsgs.length === 0) {
       container.innerHTML = `<div class="empty-state">This is the start of your message history with <strong>${getUserEmail(userId)}</strong>.</div>`;
@@ -597,7 +613,7 @@
       const bubble = document.createElement('div');
       const isAdmin = m.sender_role === 'admin';
       bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'user'}`;
-      bubble.innerText = m.message;
+      bubble.innerText = m.message || '';
       container.appendChild(bubble);
     });
     container.scrollTop = container.scrollHeight;
@@ -614,7 +630,7 @@
     try {
       isSendingAdmin = true;
       sendBtn.disabled = true;
-      input.value = ''; // Instant clear
+      input.value = '';
 
       const isSelf = activeChatUserId === currentAdminId;
       const msgStatus = isSelf ? 'read' : 'unread';
@@ -651,12 +667,14 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, async () => {
         if (activeChatUserId) {
-          await supabaseClient
-            .from('chat_messages')
-            .update({ status: 'read' })
-            .eq('user_id', activeChatUserId)
-            .eq('sender_role', 'user')
-            .eq('status', 'unread');
+          try {
+            await supabaseClient
+              .from('chat_messages')
+              .update({ status: 'read' })
+              .eq('user_id', activeChatUserId)
+              .eq('sender_role', 'user')
+              .eq('status', 'unread');
+          } catch(e) {}
         }
         await loadDMs();
       })
