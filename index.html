@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drozo-Mind Therapy - Client Portal</title>
+  
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root {
+      --bg-black: #030303;
+      --card-bg: rgba(18, 18, 20, 0.75);
+      --card-border: rgba(39, 39, 42, 0.8);
+      --accent-lime: #a3e635;
+      --accent-lime-hover: #84cc16;
+      --accent-lime-glow: rgba(163, 230, 53, 0.15);
+      --accent-lime-dark: #3f6212;
+      --text-primary: #f4f4f5;
+      --text-muted: #a1a1aa;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+    body { background: var(--bg-black); color: var(--text-primary); min-height: 100vh; display: flex; flex-direction: column; overflow-x: hidden; }
+
+    .ambient-glow {
+      position: fixed; top: -100px; right: -100px; width: 400px; height: 400px;
+      background: radial-gradient(circle, var(--accent-lime-glow) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    #toastContainer {
+      position: fixed; top: 20px; right: 20px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .toast {
+      background: #121212; border: 1px solid var(--card-border); color: #fff;
+      padding: 12px 18px; border-radius: 8px; display: flex; align-items: center; gap: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.8); opacity: 0; transform: translateY(-10px);
+      transition: 0.3s ease; font-size: 0.9rem; font-weight: 500;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast-success { border-color: var(--accent-lime); color: var(--accent-lime); }
+    .toast-error { border-color: #ef4444; color: #fca5a5; }
+
+    .auth-container { max-width: 440px; margin: 80px auto; background: var(--card-bg); backdrop-filter: blur(16px); padding: 35px; border-radius: 16px; border: 1px solid var(--card-border); box-shadow: 0 20px 40px rgba(0,0,0,0.9); width: 100%; z-index: 1; position: relative; }
+    .auth-tabs { display: flex; border-bottom: 1px solid var(--card-border); margin-bottom: 25px; }
+    .auth-tab-btn { flex: 1; padding: 12px; border: none; background: transparent; font-weight: 600; font-size: 0.95rem; color: var(--text-muted); cursor: pointer; transition: 0.2s; }
+    .auth-tab-btn.active { color: var(--accent-lime); border-bottom: 2px solid var(--accent-lime); }
+
+    .dashboard-layout { display: flex; min-height: 100vh; width: 100%; z-index: 1; position: relative; }
+    .sidebar { width: 270px; background: #000000; color: white; padding: 25px 18px; border-right: 1px solid #18181b; display: flex; flex-direction: column; justify-content: space-between; }
+    .sidebar-brand { font-size: 1.25rem; font-weight: 700; color: var(--accent-lime); margin-bottom: 35px; display: flex; align-items: center; gap: 10px; }
+    
+    .nav-menu { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .nav-item { padding: 12px 16px; border-radius: 10px; cursor: pointer; color: var(--text-muted); font-weight: 500; font-size: 0.9rem; transition: 0.2s; display: flex; align-items: center; gap: 12px; }
+    .nav-item:hover, .nav-item.active { background: rgba(163, 230, 53, 0.1); color: var(--accent-lime); }
+    .nav-item.admin-btn { background: var(--accent-lime-dark); color: var(--accent-lime); margin-top: 10px; font-weight: 600; border: 1px solid var(--accent-lime); }
+
+    .main-content { flex: 1; padding: 35px; overflow-y: auto; background: var(--bg-black); display: flex; flex-direction: column; justify-content: space-between; }
+    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; background: var(--card-bg); backdrop-filter: blur(12px); padding: 18px 25px; border-radius: 12px; border: 1px solid var(--card-border); }
+    
+    .page { display: none; }
+    .page.active-page { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card { background: var(--card-bg); backdrop-filter: blur(12px); border: 1px solid var(--card-border); border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .card h3 { font-size: 1.05rem; color: var(--text-primary); margin-bottom: 15px; border-bottom: 1px solid var(--card-border); padding-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+    label { display: block; font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; color: var(--text-muted); }
+    input, textarea, select { width: 100%; padding: 12px; margin-bottom: 18px; background: #09090b; border: 1px solid var(--card-border); border-radius: 8px; font-size: 0.95rem; color: #ffffff; transition: 0.2s; color-scheme: dark; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .btn { padding: 11px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; }
+    .btn-lime { background: var(--accent-lime); color: #000000; font-weight: 700; }
+    .btn-lime:hover { background: var(--accent-lime-hover); transform: translateY(-1px); }
+    .btn-danger { background: #ef4444; color: white; }
+
+    .stepper { display: flex; justify-content: space-between; position: relative; margin: 25px 0 10px 0; }
+    .stepper::before { content: ''; position: absolute; top: 18px; left: 10%; right: 10%; height: 2px; background: var(--card-border); z-index: 0; }
+    .step { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
+    .step-icon { width: 38px; height: 38px; border-radius: 50%; background: #18181b; border: 2px solid var(--card-border); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-weight: bold; transition: 0.3s; }
+    .step.active .step-icon { background: var(--accent-lime); border-color: var(--accent-lime); color: #000; box-shadow: 0 0 15px var(--accent-lime-glow); }
+    .step.completed .step-icon { background: var(--accent-lime-dark); border-color: var(--accent-lime); color: var(--accent-lime); }
+    .step-label { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-align: center; }
+    .step.active .step-label { color: var(--accent-lime); }
+
+    .chat-box { height: 320px; border: 1px solid var(--card-border); border-radius: 10px; padding: 15px; overflow-y: auto; background: #000000; margin-bottom: 15px; display: flex; flex-direction: column; gap: 12px; }
+    .chat-msg { max-width: 75%; padding: 12px 16px; border-radius: 12px; font-size: 0.9rem; line-height: 1.4; }
+    .chat-msg.user { background: var(--accent-lime); color: #000000; font-weight: 500; align-self: flex-end; border-bottom-right-radius: 2px; }
+    .chat-msg.admin { background: #18181b; border: 1px solid var(--card-border); color: var(--text-primary); align-self: flex-start; border-bottom-left-radius: 2px; }
+
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+    .badge-pending { background: #422006; color: #fef08a; border: 1px solid #854d0e; }
+    .badge-success { background: #1a2e05; color: var(--accent-lime); border: 1px solid var(--accent-lime-dark); }
+    
+    .alert { padding: 16px; border-radius: 10px; font-size: 0.9rem; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 12px; }
+    .alert-danger { background: #2a0808; border: 1px solid #991b1b; color: #fca5a5; }
+    .alert-info { background: #0d2104; border: 1px solid var(--accent-lime-dark); color: var(--accent-lime); }
+    .alert-warning { background: #2f1704; border: 1px solid #854d0e; color: #fef08a; }
+
+    .footer { text-align: center; padding: 20px 0 10px 0; font-size: 0.85rem; color: var(--text-muted); border-top: 1px solid #18181b; margin-top: 30px; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow"></div>
+  <div id="toastContainer"></div>
+
+  <!-- AUTH SECTION -->
+  <div id="authSection" class="auth-container">
+    <div style="text-align: center; margin-bottom: 25px;">
+      <h2 style="color: var(--accent-lime); display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <i data-lucide="brain"></i> Drozo-Mind Therapy
+      </h2>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 6px;">Client Portal Access</p>
+    </div>
+
+    <div class="auth-tabs">
+      <button id="tabSignIn" class="auth-tab-btn active" onclick="switchAuthTab('signin')">Sign In</button>
+      <button id="tabSignUp" class="auth-tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+
+    <form id="signInForm" onsubmit="handleSignIn(event)">
+      <label>Account Email</label>
+      <input type="email" id="loginEmail" placeholder="you@example.com" required>
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" required>
+      <button type="submit" class="btn btn-lime" style="width: 100%;"><i data-lucide="log-in"></i> Sign In</button>
+    </form>
+
+    <form id="signUpForm" class="hidden" onsubmit="handleSignUp(event)">
+      <label>Your Email Address</label>
+      <input type="email" id="signupEmail" placeholder="you@example.com" required>
+      <label>Password</label>
+      <input type="password" id="signupPassword" placeholder="Min. 6 characters" required minlength="6">
+      <button type="submit" class="btn btn-lime" style="width: 100%;"><i data-lucide="user-plus"></i> Create Account</button>
+    </form>
+    
+    <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 25px;">
+      © 2026 Drozo-Mind Therapy By Drozo . All rights reserved.
+    </div>
+  </div>
+
+  <!-- DASHBOARD SECTION -->
+  <div id="dashboardSection" class="dashboard-layout hidden">
+    <aside class="sidebar">
+      <div>
+        <div class="sidebar-brand">
+          <i data-lucide="brain"></i> Drozo-Mind
+        </div>
+        <ul class="nav-menu">
+          <li class="nav-item active" onclick="navigateTo('pageOverview', this)"><i data-lucide="layout-dashboard"></i> Overview</li>
+          <li class="nav-item" onclick="navigateTo('pageBookSession', this)"><i data-lucide="calendar"></i> Book Session</li>
+          <li class="nav-item" onclick="navigateTo('pageSupportChat', this)"><i data-lucide="message-square"></i> Support Chat</li>
+          <li class="nav-item" onclick="navigateTo('pageTickets', this)"><i data-lucide="ticket"></i> My Sessions</li>
+          <li class="nav-item" onclick="navigateTo('pageSettings', this)"><i data-lucide="settings"></i> Settings</li>
+          <li id="adminSidebarBtn" class="nav-item admin-btn hidden" onclick="window.location.href='admin.html'"><i data-lucide="shield"></i> Admin Panel</li>
+        </ul>
+      </div>
+      <div>
+        <button onclick="handleSignOut()" class="btn btn-danger" style="width: 100%; font-size: 0.85rem;"><i data-lucide="log-out"></i> Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div>
+        <div class="top-header">
+          <h2 id="pageTitle" style="color: var(--accent-lime); font-size: 1.2rem; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="layout-dashboard"></i> Overview
+          </h2>
+          <div style="font-size: 0.9rem;">
+            Signed in: <strong id="userEmailDisplay" style="color: var(--accent-lime);"></strong>
+          </div>
+        </div>
+
+        <div id="cooldownAlert" class="alert alert-danger hidden"></div>
+
+        <!-- PAGE 1: OVERVIEW -->
+        <div id="pageOverview" class="page active-page">
+          <div class="card">
+            <h3><i data-lucide="sparkles"></i> Welcome to Drozo-Mind Therapy</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</p>
+          </div>
+
+          <div class="card">
+            <h3><i data-lucide="activity"></i> Active Session Pipeline</h3>
+            
+            <div id="stepperContainer" class="stepper hidden">
+              <div id="step1" class="step"><div class="step-icon"><i data-lucide="file-text"></i></div><div class="step-label">Submitted</div></div>
+              <div id="step2" class="step"><div class="step-icon"><i data-lucide="clock"></i></div><div class="step-label">Slot Offered</div></div>
+              <div id="step3" class="step"><div class="step-icon"><i data-lucide="check-circle"></i></div><div class="step-label">Scheduled</div></div>
+              <div id="step4" class="step"><div class="step-icon"><i data-lucide="check"></i></div><div class="step-label">Confirmed</div></div>
+            </div>
+
+            <div id="overviewTicketSummary" style="margin-top: 15px;">
+              <p style="color: var(--text-muted); font-size: 0.9rem;">No active therapy sessions pending.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 2: BOOK SESSION -->
+        <div id="pageBookSession" class="page">
+          <div class="card">
+            <h3><i data-lucide="calendar"></i> Book a Session</h3>
+            <form id="bookingForm" onsubmit="createTicket(event)">
+              
+              <div class="form-grid">
+                <div>
+                  <label>Select Preferred Date & Time:</label>
+                  <input type="datetime-local" id="prefTimeInput" required>
+                </div>
+                <div>
+                  <label>Select Your Time Zone:</label>
+                  <select id="timezoneInput" required></select>
+                </div>
+              </div>
+
+              <label>Session Support Notes:</label>
+              <textarea id="notesInput" rows="3" placeholder="Briefly describe what you would like to focus on..."></textarea>
+              
+              <button type="submit" id="submitBtn" class="btn btn-lime" style="width: 100%;"><i data-lucide="send"></i> Submit Session Request</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- PAGE 3: SUPPORT DMS -->
+        <div id="pageSupportChat" class="page">
+          <div id="adminClosedDmNotice" class="alert alert-warning hidden">
+            <i data-lucide="lock"></i>
+            <div>
+              <h4>Support Thread Closed</h4>
+              <p style="font-size: 0.85rem; margin-top: 4px;">An administrator marked this support ticket as resolved.</p>
+              <button onclick="confirmAdminDmClose()" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 8px;">Dismiss Notice</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h3><i data-lucide="message-square"></i> Live Support Chat</h3>
+              <button id="userCloseDmBtn" onclick="closeUserDM()" class="btn btn-danger hidden" style="padding: 6px 12px; font-size: 0.8rem;"><i data-lucide="lock"></i> Close DM</button>
+            </div>
+            <p id="dmStatusNotice" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;"></p>
+            <div class="chat-box" id="chatContainer"></div>
+            <form id="chatSendForm" onsubmit="sendMessage(event)" style="display: flex; gap: 10px;">
+              <input type="text" id="chatMessageInput" placeholder="Type message..." style="margin-bottom: 0;" required>
+              <button type="submit" id="sendDmBtn" class="btn btn-lime"><i data-lucide="send"></i></button>
+            </form>
+          </div>
+        </div>
+
+        <!-- PAGE 4: TICKETS -->
+        <div id="pageTickets" class="page">
+          <div class="card">
+            <h3><i data-lucide="ticket"></i> Current Ticket Details</h3>
+            <div id="ticketCardDetails">
+              <p style="color: var(--text-muted); font-size: 0.9rem;">No active tickets found.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PAGE 5: SETTINGS -->
+        <div id="pageSettings" class="page">
+          <div class="card">
+            <h3><i data-lucide="user"></i> Account Profile</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 8px;"><strong>Email:</strong> <span id="settingsEmail"></span></p>
+            <p style="font-size: 0.9rem;"><strong>Role:</strong> <span id="userRoleDisplay" class="badge badge-success">Client</span></p>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        © 2026 Drozo-Mind Therapy By Drozo . All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    let activeTicket = null;
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle' : 'alert-circle'}"></i> <span>${message}</span>`;
+      container.appendChild(toast);
+      lucide.createIcons();
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Populate Timezone Dropdown dynamically
+    function populateTimezones() {
+      const select = document.getElementById('timezoneInput');
+      select.innerHTML = '';
+      
+      const userZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      let timezones = [];
+
+      if (typeof Intl.supportedValuesOf === 'function') {
+        timezones = Intl.supportedValuesOf('timeZone');
+      } else {
+        timezones = [
+          "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
+          "Europe/London", "Europe/Paris", "Europe/Berlin", "Asia/Tokyo", "Asia/Kolkata", "Australia/Sydney"
+        ];
+      }
+
+      timezones.forEach(tz => {
+        const opt = document.createElement('option');
+        opt.value = tz;
+        opt.textContent = tz.replace(/_/g, ' ');
+        if (tz === userZone) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    // Convert local datetime string + target timezone to accurate UTC ISO String
+    function getISOWithTimezone(dateTimeStr, timeZone) {
+      if (!dateTimeStr) return null;
+      const [datePart, timePart] = dateTimeStr.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+
+      const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+      const invDate = new Date(utcDate.toLocaleString('en-US', { timeZone }));
+      const diff = utcDate.getTime() - invDate.getTime();
+
+      return new Date(utcDate.getTime() + diff).toISOString();
+    }
+
+    async function init() {
+      populateTimezones();
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      if (session) {
+        currentUser = session.user;
+        showDashboardView();
+        setupRealtimeSubscriptions();
+      }
+      lucide.createIcons();
+    }
+
+    function setupRealtimeSubscriptions() {
+      supabaseClient
+        .channel('public:chat_messages')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+          fetchChatMessages();
+        })
+        .subscribe();
+
+      supabaseClient
+        .channel('public:tickets')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+          fetchActiveTicket();
+        })
+        .subscribe();
+    }
+
+    function navigateTo(pageId, navElement) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active-page'));
+      document.getElementById(pageId).classList.add('active-page');
+      if (navElement) {
+        document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+        navElement.classList.add('active');
+      }
+      if (pageId === 'pageSupportChat') fetchChatMessages();
+      lucide.createIcons();
+    }
+
+    function switchAuthTab(tab) {
+      if (tab === 'signin') {
+        document.getElementById('signInForm').classList.remove('hidden');
+        document.getElementById('signUpForm').classList.add('hidden');
+        document.getElementById('tabSignIn').classList.add('active');
+        document.getElementById('tabSignUp').classList.remove('active');
+      } else {
+        document.getElementById('signInForm').classList.add('hidden');
+        document.getElementById('signUpForm').classList.remove('hidden');
+        document.getElementById('tabSignIn').classList.remove('active');
+        document.getElementById('tabSignUp').classList.add('active');
+      }
+    }
+
+    async function handleSignIn(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) showToast(error.message, 'error');
+      else { currentUser = data.user; showDashboardView(); showToast('Signed in successfully!'); }
+    }
+
+    async function handleSignUp(e) {
+      e.preventDefault();
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) showToast(error.message, 'error');
+      else {
+        showToast('Account created! You can now sign in.');
+        switchAuthTab('signin');
+      }
+    }
+
+    async function handleSignOut() {
+      await supabaseClient.auth.signOut();
+      window.location.reload();
+    }
+
+    async function showDashboardView() {
+      document.getElementById('authSection').classList.add('hidden');
+      document.getElementById('dashboardSection').classList.remove('hidden');
+      document.getElementById('userEmailDisplay').innerText = currentUser.email;
+      document.getElementById('settingsEmail').innerText = currentUser.email;
+
+      await loadUserProfile();
+      await fetchActiveTicket();
+      await fetchChatMessages();
+    }
+
+    async function loadUserProfile() {
+      const { data } = await supabaseClient.from('profiles').select('*').eq('id', currentUser.id).single();
+      if (data) {
+        document.getElementById('userRoleDisplay').innerText = data.role.toUpperCase();
+        if (data.role === 'admin') document.getElementById('adminSidebarBtn').classList.remove('hidden');
+        if (data.cooldown_until && new Date() < new Date(data.cooldown_until)) {
+          const cdAlert = document.getElementById('cooldownAlert');
+          cdAlert.classList.remove('hidden');
+          cdAlert.innerHTML = `<i data-lucide="alert-octagon"></i> <div><strong>Cooldown Active:</strong> Wait until ${new Date(data.cooldown_until).toLocaleString()} to request sessions.</div>`;
+          document.getElementById('submitBtn').disabled = true;
+        }
+      }
+    }
+
+    async function fetchActiveTicket() {
+      const { data } = await supabaseClient
+        .from('tickets')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0) {
+        activeTicket = data[0];
+        renderTicketUI();
+      }
+    }
+
+    function updateStepperUI(status) {
+      const stepper = document.getElementById('stepperContainer');
+      stepper.classList.remove('hidden');
+      document.querySelectorAll('.step').forEach(s => s.className = 'step');
+
+      if (status === 'Pending Admin Assignment' || status === 'Needs Rescheduling') {
+        document.getElementById('step1').classList.add('active');
+      } else if (status === 'Time Slot Offered') {
+        document.getElementById('step1').classList.add('completed');
+        document.getElementById('step2').classList.add('active');
+      } else if (status === 'Scheduled') {
+        document.getElementById('step1').classList.add('completed');
+        document.getElementById('step2').classList.add('completed');
+        document.getElementById('step3').classList.add('active');
+        document.getElementById('step4').classList.add('active');
+      }
+      lucide.createIcons();
+    }
+
+    function renderTicketUI() {
+      if (!activeTicket) return;
+
+      if (activeTicket.status === 'Closed' && activeTicket.admin_comment) {
+        const closedContent = `
+          <div class="alert alert-danger" style="margin-top: 10px;">
+            <div>
+              <h4 style="margin-bottom: 5px;">📢 Ticket Closed (${activeTicket.ticket_number})</h4>
+              <p style="font-size: 0.9rem; margin-bottom: 12px;"><strong>Admin Reason:</strong> ${activeTicket.admin_comment}</p>
+              <button onclick="dismissClosedNotification('${activeTicket.id}')" class="btn btn-lime" style="padding: 6px 12px; font-size: 0.8rem;">Dismiss & Clear</button>
+            </div>
+          </div>
+        `;
+        document.getElementById('overviewTicketSummary').innerHTML = closedContent;
+        document.getElementById('ticketCardDetails').innerHTML = closedContent;
+        document.getElementById('stepperContainer').classList.add('hidden');
+        document.getElementById('submitBtn').disabled = false;
+        return;
+      }
+
+      if (activeTicket.status === 'Closed') {
+        document.getElementById('overviewTicketSummary').innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">No active therapy sessions pending.</p>`;
+        document.getElementById('ticketCardDetails').innerHTML = `<p style="color: var(--text-muted); font-size: 0.9rem;">No active tickets found.</p>`;
+        document.getElementById('stepperContainer').classList.add('hidden');
+        document.getElementById('submitBtn').disabled = false;
+        return;
+      }
+
+      updateStepperUI(activeTicket.status);
+
+      // Display formatted ISO Timestamps with timezone
+      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      let displayPrefTime = activeTicket.pref_time || 'N/A';
+      if (activeTicket.pref_time && !isNaN(Date.parse(activeTicket.pref_time))) {
+        displayPrefTime = `${new Date(activeTicket.pref_time).toLocaleString()} (${localTz})`;
+      }
+
+      let displayOfferedTime = activeTicket.offered_time || '';
+      if (activeTicket.offered_time && !isNaN(Date.parse(activeTicket.offered_time))) {
+        displayOfferedTime = `${new Date(activeTicket.offered_time).toLocaleString()} (${localTz})`;
+      }
+
+      const content = `
+        <div style="background: #09090b; padding: 18px; border-radius: 10px; border: 1px solid var(--card-border);">
+          <p style="font-size: 0.9rem; margin-bottom: 6px;"><strong>Ticket Reference:</strong> ${activeTicket.ticket_number}</p>
+          <p style="font-size: 0.9rem; margin-bottom: 10px;"><strong>Status:</strong> <span class="badge badge-pending">${activeTicket.status}</span></p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);"><strong>Preferred Slot:</strong> ${displayPrefTime}</p>
+          
+          ${activeTicket.status === 'Time Slot Offered' ? `
+            <div class="alert alert-info" style="margin-top: 15px; flex-direction: column;">
+              <h4><i data-lucide="clock"></i> Admin Proposed Time Slot:</h4>
+              <p style="font-size: 1rem; font-weight: bold; margin: 8px 0; color: var(--accent-lime);">
+                ${displayOfferedTime}
+              </p>
+              <div>
+                <button onclick="respondToOffer(true)" class="btn btn-lime"><i data-lucide="check"></i> Accept</button>
+                <button onclick="respondToOffer(false)" class="btn btn-danger" style="margin-left: 8px;"><i data-lucide="x"></i> Reject</button>
+              </div>
+            </div>
+          ` : ''}
+
+          ${activeTicket.status === 'Scheduled' ? `
+            <div class="alert alert-info" style="margin-top: 15px; flex-direction: column; text-align: center; align-items: center;">
+              <h4>🎉 Therapy Session Confirmed!</h4>
+              <p style="margin: 6px 0 14px 0; font-size: 0.9rem;">Scheduled Slot: <strong>${displayOfferedTime || displayPrefTime}</strong></p>
+              <div>
+                <a href="https://discord.gg/ChmhSPy6RR" target="_blank" class="btn btn-lime" style="background: #5865F2; color: white; text-decoration: none;">
+                  <i data-lucide="message-square"></i> Join Community Discord
+                </a>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      document.getElementById('overviewTicketSummary').innerHTML = content;
+      document.getElementById('ticketCardDetails').innerHTML = content;
+      document.getElementById('submitBtn').disabled = true;
+      lucide.createIcons();
+    }
+
+    async function dismissClosedNotification(ticketId) {
+      await supabaseClient.from('tickets').update({ admin_comment: null }).eq('id', ticketId);
+      activeTicket = null;
+      window.location.reload();
+    }
+
+    async function createTicket(e) {
+      e.preventDefault();
+      const timeVal = document.getElementById('prefTimeInput').value;
+      const selectedTz = document.getElementById('timezoneInput').value;
+      const notes = document.getElementById('notesInput').value;
+
+      if (!timeVal) return showToast('Please select a date and time', 'error');
+
+      // Convert local datetime + target timezone to accurate UTC ISO String
+      const isoTimestamp = getISOWithTimezone(timeVal, selectedTz);
+      const ticketNumber = 'TCK-' + Math.floor(100000 + Math.random() * 900000);
+
+      const { data, error } = await supabaseClient
+        .from('tickets')
+        .insert([{ 
+          ticket_number: ticketNumber, 
+          user_id: currentUser.id, 
+          pref_time: isoTimestamp, 
+          notes: notes 
+        }])
+        .select();
+
+      if (error) showToast(`Database Error: ${error.message}`, 'error');
+      else {
+        showToast(`Request #${ticketNumber} created!`);
+        activeTicket = data[0];
+        renderTicketUI();
+      }
+    }
+
+    async function respondToOffer(accepted) {
+      if (accepted) {
+        await supabaseClient.from('tickets').update({ status: 'Scheduled' }).eq('id', activeTicket.id);
+        showToast('Accepted proposed time slot!');
+      } else {
+        const newRejects = (activeTicket.reject_count || 0) + 1;
+        if (newRejects >= 2) {
+          await supabaseClient.from('tickets').update({ status: 'Closed', reject_count: newRejects }).eq('id', activeTicket.id);
+          const cd = new Date(); cd.setDate(cd.getDate() + 2);
+          await supabaseClient.from('profiles').update({ cooldown_until: cd.toISOString() }).eq('id', currentUser.id);
+          showToast('Slot rejected twice. Cooldown active.', 'error');
+        } else {
+          await supabaseClient.from('tickets').update({ status: 'Needs Rescheduling', reject_count: newRejects }).eq('id', activeTicket.id);
+          showToast('Rejected time slot. Admin will offer a new time.');
+        }
+      }
+      fetchActiveTicket();
+    }
+
+    async function fetchChatMessages() {
+      const { data } = await supabaseClient.from('chat_messages').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: true });
+      const container = document.getElementById('chatContainer');
+      const notice = document.getElementById('dmStatusNotice');
+      const closeBtn = document.getElementById('userCloseDmBtn');
+      const adminNoticeBanner = document.getElementById('adminClosedDmNotice');
+      const chatForm = document.getElementById('chatSendForm');
+
+      if (data && data.length > 0) {
+        container.innerHTML = data.map(msg => `
+          <div class="chat-msg ${msg.sender_role}">
+            <strong>${msg.sender_role === 'user' ? 'You' : 'Admin'}:</strong> ${msg.message}
+          </div>
+        `).join('');
+
+        const latestMsg = data[data.length - 1];
+        if (latestMsg.status === 'closed_by_admin') {
+          adminNoticeBanner.classList.remove('hidden');
+          notice.innerHTML = `<span style="color: #ef4444; font-weight: bold;">🔒 DM closed by administrator.</span>`;
+          closeBtn.classList.add('hidden'); chatForm.classList.add('hidden');
+        } else if (latestMsg.status === 'closed_by_user') {
+          adminNoticeBanner.classList.add('hidden');
+          notice.innerHTML = `<span style="color: var(--text-muted); font-weight: bold;">🔒 DM Thread Closed. Send a message to reopen.</span>`;
+          closeBtn.classList.add('hidden'); chatForm.classList.remove('hidden');
+        } else if (latestMsg.status === 'accepted') {
+          adminNoticeBanner.classList.add('hidden');
+          notice.innerHTML = `<span style="color: var(--accent-lime); font-weight: bold;">🟢 Support DM is active.</span>`;
+          closeBtn.classList.remove('hidden'); chatForm.classList.remove('hidden');
+        } else {
+          adminNoticeBanner.classList.add('hidden');
+          notice.innerHTML = `<span style="color: #fde68a; font-weight: bold;">🟡 Pending Admin Review...</span>`;
+          closeBtn.classList.add('hidden'); chatForm.classList.remove('hidden');
+        }
+      } else {
+        container.innerHTML = `<p style="color: var(--text-muted); text-align: center; font-size: 0.85rem;">No support messages sent yet.</p>`;
+        notice.innerHTML = `Send a message to request a live support chat session.`;
+        closeBtn.classList.add('hidden'); adminNoticeBanner.classList.add('hidden'); chatForm.classList.remove('hidden');
+      }
+      container.scrollTop = container.scrollHeight;
+      lucide.createIcons();
+    }
+
+    async function closeUserDM() {
+      await supabaseClient.from('chat_messages').update({ status: 'closed_by_user' }).eq('user_id', currentUser.id);
+      await supabaseClient.from('chat_messages').insert([{ user_id: currentUser.id, sender_role: 'user', message: "🔒 [Client closed DM thread]", status: 'closed_by_user' }]);
+      showToast('Support thread closed');
+      fetchChatMessages();
+    }
+
+    async function confirmAdminDmClose() {
+      await supabaseClient.from('chat_messages').update({ status: 'closed_by_user' }).eq('user_id', currentUser.id);
+      document.getElementById('adminClosedDmNotice').classList.add('hidden');
+      fetchChatMessages();
+    }
+
+    async function sendMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('chatMessageInput');
+      await supabaseClient.from('chat_messages').insert([{ user_id: currentUser.id, sender_role: 'user', message: input.value, status: 'pending' }]);
+      input.value = '';
+      fetchChatMessages();
+    }
+
+    init();
+  </script>
+</body>
+</html>
