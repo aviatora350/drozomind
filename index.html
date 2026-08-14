@@ -339,8 +339,11 @@
         <div id="booking-restriction-notice"></div>
 
         <div id="booking-form-box">
-          <label>Preferred Date & Time</label>
+          <label>Preferred Date & Time <span style="color:var(--danger)">*</span></label>
           <input type="datetime-local" id="book-datetime">
+
+          <label>Discord Username <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="book-discord" placeholder="e.g. username or handle#1234">
 
           <label>Session Notes / Focus Area (Optional)</label>
           <textarea id="book-notes" rows="3" placeholder="Describe what you'd like to discuss..."></textarea>
@@ -427,7 +430,6 @@
 <script>
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
-  // Updated Discord Link
   const DISCORD_INVITE_URL = "https://discord.gg/SaJMRJr4Y8";
 
   const { createClient } = window.supabase;
@@ -448,8 +450,15 @@
     document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
   }
 
+  // Timezone Helper: Converts ISO UTC string to user's local timezone display
+  function formatLocalDateTime(isoString) {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return isoString;
+    return date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+  }
+
   async function syncUserProfile(userId, userEmail) {
-    // Strictly restrict auto-admin: ONLY aviatorrudra@gmail.com gets admin by default. ALL others get 'user'.
     const assignedRole = userEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
 
     const { data: existingProfile } = await supabaseClient
@@ -465,7 +474,6 @@
         role: assignedRole
       }]);
     } else {
-      // Ensure email stays fresh in profiles table for older users
       await supabaseClient.from('profiles').update({ email: userEmail }).eq('id', userId);
     }
   }
@@ -481,17 +489,12 @@
     if (authMode === 'signup') {
       const { data, error } = await supabaseClient.auth.signUp({ email, password, options });
       if (error) return alert("Sign-Up Error: " + error.message);
-      
-      if (data.user) {
-        await syncUserProfile(data.user.id, email);
-      }
+      if (data.user) await syncUserProfile(data.user.id, email);
       alert("Account created successfully!");
     } else {
       const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options });
       if (error) return alert("Login Error: " + error.message);
-      if (data.user) {
-        await syncUserProfile(data.user.id, data.user.email);
-      }
+      if (data.user) await syncUserProfile(data.user.id, data.user.email);
     }
 
     init();
@@ -543,11 +546,6 @@
 
       document.getElementById('support-unread-dot').classList.remove('show');
     }
-  }
-
-  function formatInputTime(rawDatetime) {
-    if (!rawDatetime) return null;
-    return new Date(rawDatetime).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
   }
 
   async function loadMyTickets() {
@@ -647,15 +645,16 @@
     pipelineContainer.innerHTML = `
       <div><strong>Ticket Ref:</strong> TCK-${activeTicket.ticket_number}</div>
       <div><strong>Status:</strong> <span class="status-highlight ${status === 'Slot Offered' ? 'offered' : ''}">${status}</span></div>
-      ${activeTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${activeTicket.pref_time}</div>` : ''}
-      ${activeTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${activeTicket.offered_time}</div>` : ''}
-      ${activeTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${activeTicket.accepted_time}</div>` : ''}
+      <div><strong>Discord Handle:</strong> <span style="color: #5865F2; font-weight: 600;">${activeTicket.discord_username || 'Not Provided'}</span></div>
+      ${activeTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${formatLocalDateTime(activeTicket.pref_time)}</div>` : ''}
+      ${activeTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${formatLocalDateTime(activeTicket.offered_time)}</div>` : ''}
+      ${activeTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${formatLocalDateTime(activeTicket.accepted_time)}</div>` : ''}
       ${activeTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${activeTicket.admin_comment}</em></div>` : ''}
 
       ${(status === 'Accepted' || status === 'Confirmed') ? `
         <div class="discord-card">
           <div style="font-size: 15px; font-weight: 700; color: #ffffff; margin-bottom: 4px;">🎉 Session Confirmed & Ready!</div>
-          <p style="font-size: 13px; color: var(--text-muted); line-height:1.4;">Your slot is locked for <strong>${activeTicket.accepted_time || activeTicket.offered_time}</strong>. Join the official Discord voice channel to meet your therapist.</p>
+          <p style="font-size: 13px; color: var(--text-muted); line-height:1.4;">Your slot is locked for <strong>${formatLocalDateTime(activeTicket.accepted_time || activeTicket.offered_time)}</strong>. Join the official Discord voice channel to meet your therapist.</p>
           <button id="discord-join-btn" class="discord-btn" onclick="connectToDiscordServer()">
             <span>💬 Connect to Discord Session</span>
           </button>
@@ -664,7 +663,7 @@
 
       ${status === 'Slot Offered' ? `
         <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; margin-top: 12px;">
-          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${activeTicket.offered_time}).</p>
+          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${formatLocalDateTime(activeTicket.offered_time)}).</p>
           <button class="btn" style="margin-top:0; margin-bottom:10px;" onclick="acceptOfferedSlot('${activeTicket.id}', '${activeTicket.offered_time}')">Accept Proposed Slot</button>
           
           <label>Or Counter-Propose Another Time:</label>
@@ -718,7 +717,7 @@
           <strong>Ticket #TCK-${t.ticket_number}</strong>
           <span class="status-highlight">${t.status}</span>
         </div>
-        <div>Date/Time: ${t.accepted_time || t.offered_time || t.pref_time || 'N/A'}</div>
+        <div>Date/Time: ${formatLocalDateTime(t.accepted_time || t.offered_time || t.pref_time)}</div>
       `;
       list.appendChild(card);
     });
@@ -731,24 +730,30 @@
     }
 
     const rawTime = document.getElementById('book-datetime').value;
+    const discordUsername = document.getElementById('book-discord').value.trim();
     const notes = document.getElementById('book-notes').value.trim();
 
     if (!rawTime) return alert("Please select a date and time.");
+    if (!discordUsername) return alert("Please enter your Discord username.");
 
-    const formattedTime = formatInputTime(rawTime);
+    const isoTime = new Date(rawTime).toISOString();
     const ticketNum = Math.floor(100000 + Math.random() * 900000);
 
-    await supabaseClient.from('tickets').insert([{
+    const { error } = await supabaseClient.from('tickets').insert([{
       ticket_number: ticketNum.toString(),
       user_id: currentUserId,
-      pref_time: formattedTime,
+      discord_username: discordUsername,
+      pref_time: isoTime,
       notes: notes,
       status: 'Submitted',
       negotiation_count: 0
     }]);
 
+    if (error) return alert("Booking failed: " + error.message);
+
     alert("Session requested successfully!");
     document.getElementById('book-datetime').value = '';
+    document.getElementById('book-discord').value = '';
     document.getElementById('book-notes').value = '';
     switchNavTab('overview', document.querySelectorAll('.nav-item')[0]);
     loadMyTickets();
@@ -772,10 +777,10 @@
       }).eq('id', ticketId);
       alert("Session cancelled automatically because maximum negotiation attempts were reached.");
     } else {
-      const formatted = formatInputTime(rawVal);
+      const isoTime = new Date(rawVal).toISOString();
       await supabaseClient.from('tickets').update({
         status: 'Submitted',
-        pref_time: formatted,
+        pref_time: isoTime,
         offered_time: null,
         negotiation_count: newCount
       }).eq('id', ticketId);
@@ -862,6 +867,5 @@
 
   init();
 </script>
-
 </body>
 </html>
