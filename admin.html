@@ -74,7 +74,7 @@
     .header-actions { display: flex; align-items: center; gap: 10px; }
     
     .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
-    .status-badge.accepted, .status-badge.admin-role { background: var(--primary); color: var(--primary-text); }
+    .status-badge.accepted, .status-badge.confirmed, .status-badge.admin-role { background: var(--primary); color: var(--primary-text); }
     .status-badge.offered { background: var(--warning); color: #000; }
     .status-badge.cancelled, .status-badge.closed { background: var(--danger); color: #fff; }
     .status-badge.user-role { background: var(--input-border); color: var(--text-muted); }
@@ -245,7 +245,8 @@
 
   /* ------------------- ACCOUNTS MANAGEMENT ------------------- */
   async function loadUsers() {
-    const { data: profiles, error } = await supabaseClient.from('profiles').select('*').order('created_at', { ascending: false });
+    // Note: Querying profiles directly without .order('created_at') prevents column-missing SQL errors
+    const { data: profiles, error } = await supabaseClient.from('profiles').select('*');
     if (error) console.error("Error fetching profiles:", error);
     allProfiles = profiles || [];
     renderAccounts();
@@ -364,12 +365,13 @@
           <div><span>Requested Time</span><strong>${formatLocalDateTime(ticket.pref_time)}</strong></div>
           <div><span>Offered Slot</span><strong>${formatLocalDateTime(ticket.offered_time)}</strong></div>
           <div><span>Confirmed Time</span><strong style="color: var(--primary);">${formatLocalDateTime(ticket.accepted_time)}</strong></div>
+          <div><span>1-Time Discord Link</span><strong style="color:#5865F2; word-break:break-all;">${ticket.discord_link || 'Not Generated'}</strong></div>
         </div>
 
         <div class="action-box">
           <div class="action-row">
-            <div><label>Accept Slot Directly:</label><span>${formatLocalDateTime(ticket.pref_time || ticket.offered_time)}</span></div>
-            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">Accept Slot</button>
+            <div><label>Accept Slot Directly & Attach Invite:</label><span>${formatLocalDateTime(ticket.pref_time || ticket.offered_time)}</span></div>
+            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">Accept & Send Link</button>
           </div>
           <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
           <div class="action-row">
@@ -389,8 +391,25 @@
 
   async function acceptTicket(ticketId, chosenTime) {
     if (!chosenTime) return alert("No time slot selected.");
-    await supabaseClient.from('tickets').update({ status: 'Accepted', accepted_time: chosenTime }).eq('id', ticketId);
-    loadTickets();
+
+    const discordLink = prompt("Paste the 1-time Discord Invite Link for this session:");
+    if (!discordLink) return alert("Confirmation cancelled: A Discord invite link is required.");
+
+    const { error } = await supabaseClient
+      .from('tickets')
+      .update({ 
+        status: 'Confirmed', 
+        accepted_time: chosenTime,
+        discord_link: discordLink.trim()
+      })
+      .eq('id', ticketId);
+
+    if (error) {
+      alert("Failed to confirm booking: " + error.message);
+    } else {
+      alert("Booking confirmed and 1-time Discord link attached!");
+      loadTickets();
+    }
   }
 
   async function offerNewSlot(ticketId, currentCount) {
