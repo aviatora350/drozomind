@@ -483,8 +483,6 @@
   }
 
   async function syncUserProfile(userId, userEmail) {
-    const assignedRole = userEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
-
     const { data: existingProfile } = await supabaseClient
       .from('profiles')
       .select('id, email, role')
@@ -492,13 +490,17 @@
       .maybeSingle();
 
     if (!existingProfile) {
+      // Default role upon profile creation
+      const initialRole = userEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user';
+      
       await supabaseClient.from('profiles').insert([{
         id: userId,
         email: userEmail,
-        role: assignedRole
+        role: initialRole
       }]);
     } else {
-      await supabaseClient.from('profiles').update({ email: userEmail, role: assignedRole }).eq('id', userId);
+      // Profile exists: ONLY sync the email, NEVER overwrite the database role
+      await supabaseClient.from('profiles').update({ email: userEmail }).eq('id', userId);
     }
   }
 
