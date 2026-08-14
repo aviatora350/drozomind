@@ -620,7 +620,7 @@
         const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
         const userEmailDisplay = getUserEmail(uId);
 
-        // FIX: Green dot appears STRICTLY if this specific user has unread messages AND is not currently open
+        // FIXED: Green dot strictly appears if user has an unread message AND is not currently open
         const hasUnread = (uId !== activeChatUserId) && msgs.some(m => m && m.user_id === uId && m.sender_role === 'user' && m.status === 'unread');
 
         const item = document.createElement('div');
@@ -720,19 +720,25 @@
 
       const initialStatus = (activeChatUserId === currentAdminId) ? 'read' : 'unread';
 
-      const { error } = await supabaseClient.from('chat_messages').insert([{
+      const { data, error } = await supabaseClient.from('chat_messages').insert([{
         user_id: activeChatUserId,
         sender_role: 'admin',
         message: msg,
         status: initialStatus
-      }]);
+      }]).select('*').single();
 
       if (error) {
         alert("Failed to send message: " + error.message);
         return;
       }
 
-      await loadDMs();
+      // Add directly to local memory array without re-querying the whole database
+      if (data) {
+        allMessages.push(data);
+      }
+      renderThreads();
+      renderChatWindow(activeChatUserId);
+
     } catch (err) {
       console.error("Error sending admin message:", err);
     } finally {
@@ -750,18 +756,30 @@
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, async (payload) => {
-        if (activeChatUserId && payload.new && payload.new.user_id === activeChatUserId && payload.new.sender_role === 'user') {
-          try {
-            await supabaseClient
-              .from('chat_messages')
-              .update({ status: 'read' })
-              .eq('user_id', activeChatUserId)
-              .eq('sender_role', 'user')
-              .eq('status', 'unread');
-          } catch(e) {}
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
+        const newMsg = payload.new;
+        if (!newMsg) return;
+
+        // Push new incoming message directly to local array
+        const existingIdx = allMessages.findIndex(m => m.id === newMsg.id);
+        if (existingIdx === -1) {
+          allMessages.push(newMsg);
+        } else {
+          allMessages[existingIdx] = newMsg;
         }
-        await loadDMs();
+
+        // If open in active chat, mark read immediately
+        if (activeChatUserId && newMsg.user_id === activeChatUserId && newMsg.sender_role === 'user') {
+          newMsg.status = 'read';
+          renderChatWindow(activeChatUserId);
+          
+          await supabaseClient
+            .from('chat_messages')
+            .update({ status: 'read' })
+            .eq('id', newMsg.id);
+        }
+
+        renderThreads();
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
