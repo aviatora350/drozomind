@@ -3,198 +3,281 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Dashboard - Ticket & Session Control</title>
+  <title>Drozo Mind Therapy - Admin Panel</title>
   <!-- Supabase JS Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-color: #f4f6f9;
-      --card-bg: #ffffff;
-      --primary: #3498db;
-      --success: #2ecc71;
-      --warning: #f39c12;
-      --danger: #e74c3c;
-      --neutral: #7f8c8d;
-      --text-dark: #2c3e50;
-      --text-muted: #6c757d;
-      --border-color: #e9ecef;
+      --bg-color: #050505;           /* Deep Pitch Black */
+      --card-bg: #111114;            /* Dark Charcoal Card */
+      --card-border: #222228;        /* Subtle Border */
+      --primary: #9bf00b;            /* Drozo Lime Green Accent */
+      --primary-hover: #82cc08;      /* Slightly Darker Lime Hover */
+      --primary-text: #050505;       /* Black text inside lime buttons */
+      --success: #9bf00b;            /* Active / Connected Lime */
+      --warning: #f59e0b;            /* Pending Amber */
+      --danger: #ef4444;             /* Cancelled / Remove Red */
+      --neutral: #6b7280;            /* Closed Gray */
+      --text-main: #ffffff;          /* Pure White Text */
+      --text-muted: #9ca3af;         /* Soft Gray Subtext */
+      --input-bg: #09090b;           /* Input Background */
+      --input-border: #26262e;       /* Input Border */
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-color); color: var(--text-dark); padding: 24px; }
-    
-    .container { max-width: 1100px; margin: 0 auto; }
-    
-    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid var(--border-color); }
-    h1 { font-size: 26px; color: var(--text-dark); }
-    
-    /* Stats Bar */
-    .stats-bar { display: flex; gap: 16px; margin-bottom: 24px; }
-    .stat-card { flex: 1; background: var(--card-bg); padding: 16px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); text-align: center; }
-    .stat-number { font-size: 22px; font-weight: bold; margin-top: 4px; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 24px; }
 
-    /* Filters */
-    .filter-bar { display: flex; gap: 10px; margin-bottom: 20px; }
-    .filter-btn { padding: 8px 16px; border: 1px solid var(--border-color); background: var(--card-bg); border-radius: 6px; cursor: pointer; font-weight: 600; color: var(--text-muted); transition: all 0.2s; }
-    .filter-btn.active, .filter-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Header Nav */
+    header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .logo-title { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; color: var(--primary); }
+    .btn-portal { background: transparent; color: var(--text-main); border: 1px solid var(--primary); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 600; transition: all 0.2s; }
+    .btn-portal:hover { background: var(--primary); color: var(--primary-text); }
+
+    /* Navigation Tabs */
+    .tab-nav { display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); padding-bottom: 14px; }
+    .tab-btn { background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--card-border); padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .tab-btn.active, .tab-btn:hover { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+    
+    .badge-count { background: var(--danger); color: #fff; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 10px; display: none; }
+    .badge-count.show { display: inline-block; }
+
+    /* Stats Bar */
+    .stats-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--card-bg); border: 1px solid var(--card-border); padding: 18px; border-radius: 12px; text-align: center; }
+    .stat-number { font-size: 26px; font-weight: 800; margin-top: 6px; color: var(--text-main); }
+
+    /* Content Views */
+    .view-panel { display: none; }
+    .view-panel.active { display: block; }
 
     /* Ticket Cards */
-    .ticket-list { display: flex; flex-direction: column; gap: 20px; }
-    .ticket-card { background: var(--card-bg); border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 6px solid var(--primary); position: relative; }
-    
-    /* Status Colors */
-    .ticket-card.pending { border-left-color: var(--warning); }
-    .ticket-card.accepted { border-left-color: var(--success); }
-    .ticket-card.offered { border-left-color: var(--primary); }
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 20px; }
+    .filter-btn { background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .filter-btn.active { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+
+    .ticket-list { display: flex; flex-direction: column; gap: 18px; }
+    .ticket-card { background: var(--card-bg); border: 1px solid var(--card-border); border-left: 6px solid var(--primary); border-radius: 12px; padding: 20px; }
+    .ticket-card.accepted { border-left-color: var(--primary); }
+    .ticket-card.offered { border-left-color: var(--warning); }
     .ticket-card.cancelled { border-left-color: var(--danger); }
     .ticket-card.closed { border-left-color: var(--neutral); }
 
-    .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .ticket-title { font-size: 18px; font-weight: bold; }
+    .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
+    .status-badge.accepted { background: var(--primary); }
+    .status-badge.offered { background: var(--warning); }
+    .status-badge.cancelled { background: var(--danger); color: #fff; }
 
-    /* Badges */
-    .badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; color: #fff; text-transform: uppercase; }
-    .badge.pending { background: var(--warning); }
-    .badge.accepted { background: var(--success); }
-    .badge.offered { background: var(--primary); }
-    .badge.cancelled { background: var(--danger); }
-    .badge.closed { background: var(--neutral); }
+    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; background: var(--input-bg); border: 1px solid var(--card-border); padding: 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+    .details-grid span { display: block; font-size: 10px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
 
-    /* Details Grid */
-    .details-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px; background: #f8f9fa; padding: 12px; border-radius: 6px; font-size: 14px; }
-    .details-item span { display: block; font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 700; }
-    
-    /* Inline Action Box */
-    .action-box { background: #fafbfc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; margin-top: 12px; }
-    .action-box h4 { font-size: 14px; margin-bottom: 12px; color: var(--text-dark); text-transform: uppercase; letter-spacing: 0.5px; }
-
-    .action-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+    /* Form & Action Controls */
+    .action-box { background: var(--input-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; }
+    .action-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 12px; }
     .action-row:last-child { margin-bottom: 0; }
-    
-    label { font-size: 12px; font-weight: 600; display: block; margin-bottom: 4px; color: var(--text-muted); }
-    input[type="datetime-local"], input[type="text"] { width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px; outline: none; }
+    label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; }
+    input[type="datetime-local"], input[type="text"] { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
     input:focus { border-color: var(--primary); }
 
     /* Buttons */
-    .btn { padding: 9px 16px; border: none; border-radius: 6px; font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; color: #fff; white-space: nowrap; }
-    .btn:hover { opacity: 0.88; }
-    .btn-accept { background-color: var(--success); }
-    .btn-offer { background-color: var(--primary); }
-    .btn-cancel { background-color: var(--danger); }
-    .btn-close { background-color: var(--neutral); }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); transition: all 0.2s; white-space: nowrap; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-accept { background-color: var(--primary); }
+    .btn-offer { background-color: var(--warning); color: #000; }
+    .btn-cancel { background-color: var(--danger); color: #fff; }
+    .btn-close { background-color: var(--neutral); color: #fff; }
+    .btn-role { background-color: var(--primary); }
+    .btn-role.demote { background-color: var(--danger); color: #fff; }
 
-    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 16px; }
-    .error-notice { background: #fde8e8; color: var(--danger); border: 1px solid #f8b4b4; padding: 16px; border-radius: 8px; margin-bottom: 16px; display: none; }
+    /* DM Chat Layout */
+    .chat-layout { display: grid; grid-template-columns: 300px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
+    .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
+    .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; transition: background 0.2s; }
+    .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
+    .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; color: var(--text-main); }
+    .thread-preview { font-size: 12px; color: var(--text-muted); }
+
+    .chat-window { display: flex; flex-direction: column; justify-content: space-between; }
+    .chat-messages { padding: 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 10px; font-size: 13px; line-height: 1.4; }
+    .chat-bubble.user { background: var(--input-bg); border: 1px solid var(--card-border); align-self: flex-start; color: var(--text-main); }
+    .chat-bubble.admin { background: var(--primary); align-self: flex-end; color: var(--primary-text); font-weight: 600; }
+    .chat-sender-info { font-size: 10px; opacity: 0.75; margin-bottom: 4px; display: block; }
+    .chat-input-row { padding: 14px; border-top: 1px solid var(--card-border); display: flex; gap: 12px; background: var(--input-bg); }
+
+    /* Users Table */
+    .user-table { width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--card-border); }
+    .user-table th, .user-table td { padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--card-border); font-size: 13px; }
+    .user-table th { background: var(--input-bg); color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700; }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 14px; }
   </style>
 </head>
 <body>
 
 <div class="container">
+  <!-- Header -->
   <header>
-    <h1>Admin Booking & Session Control</h1>
-    <span id="connection-status" style="font-size: 12px; color: var(--warning); font-weight: bold;">● Connecting...</span>
+    <div class="header-left">
+      <div class="logo-title">
+        🛡️ Drozo Mind Therapy
+      </div>
+      <a href="index.html" class="btn-portal">← Client Portal</a>
+    </div>
+    <span id="connection-status" style="font-size: 12px; color: var(--warning); font-weight: 600;">● Connecting...</span>
   </header>
 
-  <div id="error-banner" class="error-notice"></div>
+  <!-- Navigation Tabs -->
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="switchTab('tickets', this)">
+      🎟️ Bookings & Sessions
+    </button>
+    <button class="tab-btn" onclick="switchTab('dms', this)">
+      💬 Direct Messages
+      <span id="dm-notification-badge" class="badge-count">0</span>
+    </button>
+    <button class="tab-btn" onclick="switchTab('users', this)">
+      👥 Registered Users & Roles
+    </button>
+  </div>
 
-  <!-- Quick Overview Stats -->
-  <div class="stats-bar">
-    <div class="stat-card">
-      <div style="color: var(--text-muted); font-size: 12px;">TOTAL TICKETS</div>
-      <div class="stat-number" id="stat-total">0</div>
+  <!-- TAB 1: TICKETS DASHBOARD -->
+  <div id="view-tickets" class="view-panel active">
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div style="color: var(--text-muted); font-size: 11px;">TOTAL TICKETS</div>
+        <div class="stat-number" id="stat-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div style="color: var(--warning); font-size: 11px;">PENDING</div>
+        <div class="stat-number" id="stat-pending">0</div>
+      </div>
+      <div class="stat-card">
+        <div style="color: var(--primary); font-size: 11px;">CONFIRMED/ACTIVE</div>
+        <div class="stat-number" id="stat-active">0</div>
+      </div>
+      <div class="stat-card">
+        <div style="color: var(--neutral); font-size: 11px;">CLOSED</div>
+        <div class="stat-number" id="stat-closed">0</div>
+      </div>
     </div>
-    <div class="stat-card">
-      <div style="color: var(--warning); font-size: 12px;">PENDING</div>
-      <div class="stat-number" id="stat-pending">0</div>
+
+    <div class="filter-bar">
+      <button class="filter-btn active" onclick="setTicketFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setTicketFilter('pending', this)">Pending</button>
+      <button class="filter-btn" onclick="setTicketFilter('accepted', this)">Accepted</button>
+      <button class="filter-btn" onclick="setTicketFilter('offered', this)">Offered</button>
+      <button class="filter-btn" onclick="setTicketFilter('closed', this)">Closed</button>
     </div>
-    <div class="stat-card">
-      <div style="color: var(--success); font-size: 12px;">CONFIRMED/ACTIVE</div>
-      <div class="stat-number" id="stat-active">0</div>
-    </div>
-    <div class="stat-card">
-      <div style="color: var(--neutral); font-size: 12px;">CLOSED</div>
-      <div class="stat-number" id="stat-closed">0</div>
+
+    <div id="tickets-list" class="ticket-list">
+      <div class="empty-state">Loading booking requests...</div>
     </div>
   </div>
 
-  <!-- Status Filter Bar -->
-  <div class="filter-bar">
-    <button class="filter-btn active" onclick="setFilter('all', this)">All Tickets</button>
-    <button class="filter-btn" onclick="setFilter('pending', this)">Pending</button>
-    <button class="filter-btn" onclick="setFilter('accepted', this)">Accepted</button>
-    <button class="filter-btn" onclick="setFilter('offered', this)">Slot Offered</button>
-    <button class="filter-btn" onclick="setFilter('closed', this)">Closed</button>
+  <!-- TAB 2: DIRECT MESSAGES -->
+  <div id="view-dms" class="view-panel">
+    <div class="chat-layout">
+      <div class="user-threads" id="threads-list">
+        <div class="empty-state">Loading message threads...</div>
+      </div>
+      <div class="chat-window">
+        <div class="chat-messages" id="chat-messages-container">
+          <div class="empty-state">Select a user thread on the left to start messaging.</div>
+        </div>
+        <div class="chat-input-row">
+          <input type="text" id="admin-chat-input" placeholder="Type your response to the client...">
+          <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Ticket List Container -->
-  <div id="tickets-list" class="ticket-list">
-    <div class="empty-state">Loading booking requests...</div>
+  <!-- TAB 3: USER MANAGEMENT & ADMIN ROLES -->
+  <div id="view-users" class="view-panel">
+    <table class="user-table">
+      <thead>
+        <tr>
+          <th>User Email</th>
+          <th>User ID</th>
+          <th>Current Role</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="users-table-body">
+        <tr><td colspan="4" class="empty-state">Loading registered profiles...</td></tr>
+      </tbody>
+    </table>
   </div>
+
 </div>
 
 <script>
   // ========================================================
-  // 1. SUPABASE INITIALIZATION (FIXED VARIABLE SHADOWING)
+  // 1. SUPABASE CLIENT SETUP
   // ========================================================
   const SUPABASE_URL = "YOUR_SUPABASE_URL";
   const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
 
-  // Use window.supabase destructuring to avoid variable name collision
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  let currentFilter = 'all';
   let allTickets = [];
-
-  function showError(msg) {
-    const banner = document.getElementById('error-banner');
-    banner.style.display = 'block';
-    banner.innerText = msg;
-  }
-
-  function clearError() {
-    const banner = document.getElementById('error-banner');
-    banner.style.display = 'none';
-    banner.innerText = '';
-  }
+  let allProfiles = [];
+  let allMessages = [];
+  let currentTicketFilter = 'all';
+  let activeChatUserId = null;
 
   // ========================================================
-  // 2. FETCH AND RENDER TICKETS
+  // 2. TAB SWITCHING
   // ========================================================
-  async function loadTickets() {
-    clearError();
-    try {
-      const { data: tickets, error } = await supabaseClient
-        .from('tickets')
-        .select('*')
-        .order('created_at', { ascending: false });
+  function switchTab(tabName, btnElement) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-panel').forEach(v => v.classList.remove('active'));
 
-      if (error) {
-        showError('Supabase Error: ' + error.message);
-        document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">Failed to load tickets. Check console or Supabase configuration.</div>`;
-        return;
-      }
+    btnElement.classList.add('active');
+    document.getElementById(`view-${tabName}`).classList.add('active');
 
-      allTickets = tickets || [];
-      updateStats();
-      renderTickets();
-    } catch (err) {
-      showError('Script Error: ' + err.message);
-      document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">An unexpected error occurred.</div>`;
+    if (tabName === 'dms') {
+      const badge = document.getElementById('dm-notification-badge');
+      badge.classList.remove('show');
+      badge.innerText = '0';
     }
   }
 
-  function updateStats() {
+  // ========================================================
+  // 3. TICKETS MANAGEMENT
+  // ========================================================
+  async function loadTickets() {
+    const { data: tickets, error } = await supabaseClient
+      .from('tickets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      document.getElementById('tickets-list').innerHTML = `<div class="empty-state">Error loading tickets: ${error.message}</div>`;
+      return;
+    }
+
+    allTickets = tickets || [];
+    updateTicketStats();
+    renderTickets();
+  }
+
+  function updateTicketStats() {
     document.getElementById('stat-total').innerText = allTickets.length;
     document.getElementById('stat-pending').innerText = allTickets.filter(t => (t.status || '').toLowerCase().includes('pending')).length;
     document.getElementById('stat-active').innerText = allTickets.filter(t => t.status === 'Accepted').length;
     document.getElementById('stat-closed').innerText = allTickets.filter(t => t.status === 'Closed').length;
   }
 
-  function setFilter(filter, element) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    element.classList.add('active');
+  function setTicketFilter(filter, el) {
+    currentTicketFilter = filter;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
     renderTickets();
   }
 
@@ -203,116 +286,82 @@
     container.innerHTML = '';
 
     const filtered = allTickets.filter(t => {
-      const status = (t.status || '').toLowerCase();
-      if (currentFilter === 'all') return true;
-      if (currentFilter === 'pending') return status.includes('pending');
-      if (currentFilter === 'accepted') return status === 'accepted';
-      if (currentFilter === 'offered') return status.includes('offered') || status.includes('slot');
-      if (currentFilter === 'closed') return status === 'closed' || status === 'cancelled';
+      const s = (t.status || '').toLowerCase();
+      if (currentTicketFilter === 'all') return true;
+      if (currentTicketFilter === 'pending') return s.includes('pending');
+      if (currentTicketFilter === 'accepted') return s === 'accepted';
+      if (currentTicketFilter === 'offered') return s.includes('offered') || s.includes('slot');
+      if (currentTicketFilter === 'closed') return s === 'closed' || s === 'cancelled';
       return true;
     });
 
     if (filtered.length === 0) {
-      container.innerHTML = `<div class="empty-state">No tickets found matching "${currentFilter}".</div>`;
+      container.innerHTML = `<div class="empty-state">No tickets found under "${currentTicketFilter}".</div>`;
       return;
     }
 
     filtered.forEach(ticket => {
       const statusKey = getStatusKey(ticket.status);
+      const userProfile = allProfiles.find(p => p.id === ticket.user_id);
+      const userEmail = userProfile ? userProfile.email : ticket.user_id;
+
       const card = document.createElement('div');
       card.className = `ticket-card ${statusKey}`;
-
       card.innerHTML = `
         <div class="ticket-header">
-          <div class="ticket-title">Ticket #${ticket.ticket_number}</div>
-          <span class="badge ${statusKey}">${ticket.status || 'Pending'}</span>
+          <strong style="font-size: 16px;">Ticket #${ticket.ticket_number}</strong>
+          <span class="status-badge ${statusKey}">${ticket.status || 'Pending'}</span>
         </div>
 
         <div class="details-grid">
-          <div class="details-item">
-            <span>User ID</span>
-            ${ticket.user_id}
-          </div>
-          <div class="details-item">
-            <span>User Preferred Time</span>
-            <strong>${ticket.pref_time || 'N/A'}</strong>
-          </div>
-          <div class="details-item">
-            <span>Offered Time</span>
-            <strong>${ticket.offered_time || 'None'}</strong>
-          </div>
-          <div class="details-item">
-            <span>Confirmed Session Time</span>
-            <strong style="color: var(--success);">${ticket.accepted_time || 'Not Confirmed'}</strong>
-          </div>
-          <div class="details-item">
-            <span>User Notes</span>
-            ${ticket.notes || 'None'}
-          </div>
-          <div class="details-item">
-            <span>Admin Comment / Reason</span>
-            ${ticket.admin_comment || 'None'}
-          </div>
+          <div><span>Client Email</span>${userEmail}</div>
+          <div><span>Preferred Time</span><strong>${ticket.pref_time || 'N/A'}</strong></div>
+          <div><span>Offered Time</span><strong>${ticket.offered_time || 'None'}</strong></div>
+          <div><span>Confirmed Time</span><strong style="color: var(--primary);">${ticket.accepted_time || 'Not Confirmed'}</strong></div>
+          <div><span>User Notes</span>${ticket.notes || 'None'}</div>
+          <div><span>Admin Reason / Comment</span>${ticket.admin_comment || 'None'}</div>
         </div>
 
-        <!-- INLINE ACTION CONTROLS -->
         <div class="action-box">
-          <h4>Manage Session & Time Slots</h4>
-
-          <!-- Option 1: Accept Preferred or Current Slot -->
           <div class="action-row">
             <div>
-              <label>Accept Preferred/Offered Slot Directly:</label>
-              <span style="font-size: 13px; color: var(--text-dark);">
-                Current Slot: <strong>${ticket.pref_time || ticket.offered_time || 'None'}</strong>
-              </span>
+              <label>Accept Preferred/Offered Time Directly:</label>
+              <span style="font-size: 12px; color: var(--text-muted);">Selected Slot: <strong style="color:var(--text-main);">${ticket.pref_time || ticket.offered_time || 'None'}</strong></span>
             </div>
-            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">
-              Accept Slot
-            </button>
+            <button class="btn btn-accept" onclick="acceptTicket('${ticket.id}', '${ticket.pref_time || ticket.offered_time || ''}')">Accept Slot</button>
           </div>
 
-          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+          <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
 
-          <!-- Option 2: Offer Custom Time Slot -->
           <div class="action-row">
             <div>
-              <label for="slot-input-${ticket.id}">Offer Alternative Slot:</label>
-              <input type="datetime-local" id="slot-input-${ticket.id}">
+              <label>Offer Alternative Slot:</label>
+              <input type="datetime-local" id="slot-picker-${ticket.id}">
             </div>
-            <button class="btn btn-offer" style="margin-top: 18px;" onclick="offerNewSlot('${ticket.id}')">
-              Send Slot Offer
-            </button>
+            <button class="btn btn-offer" style="margin-top:16px;" onclick="offerNewSlot('${ticket.id}')">Send Offer</button>
           </div>
 
-          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+          <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
 
-          <!-- Option 3: Cancel Booking with Reason -->
           <div class="action-row">
             <div>
-              <label for="cancel-reason-${ticket.id}">Cancel Booking Reason:</label>
-              <input type="text" id="cancel-reason-${ticket.id}" placeholder="e.g., Slot unavailable / Requested time outside working hours">
+              <label>Cancel Request (Reason):</label>
+              <input type="text" id="cancel-reason-${ticket.id}" placeholder="e.g., Slot unavailable">
             </div>
-            <button class="btn btn-cancel" style="margin-top: 18px;" onclick="cancelBooking('${ticket.id}')">
-              Cancel Booking
-            </button>
+            <button class="btn btn-cancel" style="margin-top:16px;" onclick="cancelBooking('${ticket.id}')">Cancel Booking</button>
           </div>
 
-          <hr style="border:0; border-top: 1px solid var(--border-color); margin: 12px 0;">
+          <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
 
-          <!-- Option 4: Close Completed Session -->
           <div class="action-row">
             <div>
-              <label for="close-reason-${ticket.id}">Close Session Notes:</label>
-              <input type="text" id="close-reason-${ticket.id}" placeholder="e.g., Session completed successfully">
+              <label>Close Session (Notes):</label>
+              <input type="text" id="close-reason-${ticket.id}" placeholder="e.g., Session completed">
             </div>
-            <button class="btn btn-close" style="margin-top: 18px;" onclick="closeSession('${ticket.id}')">
-              Close Session
-            </button>
+            <button class="btn btn-close" style="margin-top:16px;" onclick="closeSession('${ticket.id}')">Close Session</button>
           </div>
         </div>
       `;
-
       container.appendChild(card);
     });
   }
@@ -327,115 +376,236 @@
     return 'pending';
   }
 
-  // ========================================================
-  // 3. ACTION HANDLERS
-  // ========================================================
-
+  // --- Ticket Actions ---
   async function acceptTicket(ticketId, chosenTime) {
-    if (!chosenTime) {
-      alert("No valid preferred or offered time exists to accept. Please offer a custom slot first.");
-      return;
-    }
-
-    const { error } = await supabaseClient
-      .from('tickets')
-      .update({
-        status: 'Accepted',
-        accepted_time: chosenTime
-      })
-      .eq('id', ticketId);
-
-    if (error) alert('Error updating ticket: ' + error.message);
-    else loadTickets();
+    if (!chosenTime) return alert("No valid time slot to accept.");
+    await supabaseClient.from('tickets').update({ status: 'Accepted', accepted_time: chosenTime }).eq('id', ticketId);
+    loadTickets();
   }
 
   async function offerNewSlot(ticketId) {
-    const input = document.getElementById(`slot-input-${ticketId}`);
-    if (!input || !input.value) {
-      alert('Please select a date and time before sending an offer.');
-      return;
-    }
-
-    const formattedTime = new Date(input.value).toLocaleString([], {
-      dateStyle: 'medium',
-      timeStyle: 'short'
-    });
-
-    const { error } = await supabaseClient
-      .from('tickets')
-      .update({
-        status: 'Slot Offered',
-        offered_time: formattedTime
-      })
-      .eq('id', ticketId);
-
-    if (error) alert('Error sending slot offer: ' + error.message);
-    else loadTickets();
+    const val = document.getElementById(`slot-picker-${ticketId}`).value;
+    if (!val) return alert("Select a date/time first.");
+    const formatted = new Date(val).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+    await supabaseClient.from('tickets').update({ status: 'Slot Offered', offered_time: formatted }).eq('id', ticketId);
+    loadTickets();
   }
 
   async function cancelBooking(ticketId) {
-    const input = document.getElementById(`cancel-reason-${ticketId}`);
-    const reason = input ? input.value.trim() : '';
-
-    if (!reason) {
-      alert('Please enter a cancellation reason.');
-      return;
-    }
-
-    const { error } = await supabaseClient
-      .from('tickets')
-      .update({
-        status: 'Cancelled',
-        admin_comment: reason
-      })
-      .eq('id', ticketId);
-
-    if (error) alert('Error cancelling ticket: ' + error.message);
-    else loadTickets();
+    const reason = document.getElementById(`cancel-reason-${ticketId}`).value;
+    if (!reason.trim()) return alert("Enter a cancellation reason.");
+    await supabaseClient.from('tickets').update({ status: 'Cancelled', admin_comment: reason }).eq('id', ticketId);
+    loadTickets();
   }
 
   async function closeSession(ticketId) {
-    const input = document.getElementById(`close-reason-${ticketId}`);
-    const reason = input ? input.value.trim() : '';
-
-    if (!reason) {
-      alert('Please provide session completion notes or a reason before closing.');
-      return;
-    }
-
-    const { error } = await supabaseClient
-      .from('tickets')
-      .update({
-        status: 'Closed',
-        admin_comment: reason
-      })
-      .eq('id', ticketId);
-
-    if (error) alert('Error closing session: ' + error.message);
-    else loadTickets();
+    const reason = document.getElementById(`close-reason-${ticketId}`).value;
+    if (!reason.trim()) return alert("Enter session completion notes.");
+    await supabaseClient.from('tickets').update({ status: 'Closed', admin_comment: reason }).eq('id', ticketId);
+    loadTickets();
   }
 
   // ========================================================
-  // 4. REALTIME SUBSCRIPTION
+  // 4. USER MANAGEMENT & ROLE TOGGLE
   // ========================================================
-  supabaseClient
-    .channel('public:tickets')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+  async function loadUsers() {
+    const { data: profiles, error } = await supabaseClient
+      .from('profiles')
+      .select('*')
+      .order('email', { ascending: true });
+
+    if (error) return;
+    allProfiles = profiles || [];
+    renderUsers();
+  }
+
+  function renderUsers() {
+    const tbody = document.getElementById('users-table-body');
+    tbody.innerHTML = '';
+
+    if (allProfiles.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" class="empty-state">No user profiles recorded yet.</td></tr>`;
+      return;
+    }
+
+    allProfiles.forEach(user => {
+      const isAdmin = user.role === 'admin';
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${user.email}</strong></td>
+        <td style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${user.id}</td>
+        <td>
+          <span class="status-badge ${isAdmin ? 'accepted' : 'closed'}">${user.role || 'user'}</span>
+        </td>
+        <td>
+          <button class="btn ${isAdmin ? 'btn-role demote' : 'btn-role'}" onclick="toggleUserRole('${user.id}', '${isAdmin ? 'user' : 'admin'}')">
+            ${isAdmin ? 'Remove Admin' : 'Make Admin'}
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function toggleUserRole(userId, newRole) {
+    const { error } = await supabaseClient
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+
+    if (error) alert('Error changing role: ' + error.message);
+    else {
+      await loadUsers();
       loadTickets();
-    })
-    .subscribe((status) => {
-      const statusEl = document.getElementById('connection-status');
-      if (status === 'SUBSCRIBED') {
-        statusEl.innerText = '● Realtime Active';
-        statusEl.style.color = 'var(--success)';
-      } else {
-        statusEl.innerText = '○ Connecting...';
-        statusEl.style.color = 'var(--warning)';
-      }
+    }
+  }
+
+  // ========================================================
+  // 5. DIRECT MESSAGES & NOTIFICATIONS
+  // ========================================================
+  async function loadDMs() {
+    const { data: msgs, error } = await supabaseClient
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: true });
+
+    if (error) return;
+    allMessages = msgs || [];
+    renderThreads();
+    if (activeChatUserId) renderChatWindow(activeChatUserId);
+  }
+
+  function renderThreads() {
+    const container = document.getElementById('threads-list');
+    container.innerHTML = '';
+
+    const userMap = {};
+    allMessages.forEach(m => {
+      if (!userMap[m.user_id]) userMap[m.user_id] = [];
+      userMap[m.user_id].push(m);
     });
 
-  // Initial Data Fetch
-  loadTickets();
+    const userIds = Object.keys(userMap);
+    if (userIds.length === 0) {
+      container.innerHTML = `<div class="empty-state">No DMs received yet.</div>`;
+      return;
+    }
+
+    userIds.forEach(uId => {
+      const msgs = userMap[uId];
+      const lastMsg = msgs[msgs.length - 1];
+      const profile = allProfiles.find(p => p.id === uId);
+      const email = profile ? profile.email : uId;
+
+      const item = document.createElement('div');
+      item.className = `thread-item ${activeChatUserId === uId ? 'active' : ''}`;
+      item.onclick = () => selectThread(uId);
+      item.innerHTML = `
+        <div class="thread-email">${email}</div>
+        <div class="thread-preview">${lastMsg.sender_role === 'admin' ? 'You: ' : ''}${lastMsg.message}</div>
+      `;
+      container.appendChild(item);
+    });
+  }
+
+  function selectThread(userId) {
+    activeChatUserId = userId;
+    renderThreads();
+    renderChatWindow(userId);
+  }
+
+  function renderChatWindow(userId) {
+    const container = document.getElementById('chat-messages-container');
+    container.innerHTML = '';
+
+    const userMsgs = allMessages.filter(m => m.user_id === userId);
+    const profile = allProfiles.find(p => p.id === userId);
+    const email = profile ? profile.email : userId;
+
+    if (userMsgs.length === 0) {
+      container.innerHTML = `<div class="empty-state">No conversation history.</div>`;
+      return;
+    }
+
+    userMsgs.forEach(m => {
+      const bubble = document.createElement('div');
+      const isAdmin = m.sender_role === 'admin';
+      bubble.className = `chat-bubble ${isAdmin ? 'admin' : 'user'}`;
+      bubble.innerHTML = `
+        <span class="chat-sender-info">${isAdmin ? 'Admin' : email}</span>
+        ${m.message}
+      `;
+      container.appendChild(bubble);
+    });
+
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendAdminMessage() {
+    if (!activeChatUserId) return alert("Select a user thread on the left first.");
+    const input = document.getElementById('admin-chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const { error } = await supabaseClient
+      .from('chat_messages')
+      .insert([{
+        user_id: activeChatUserId,
+        sender_role: 'admin',
+        message: msg,
+        status: 'replied'
+      }]);
+
+    if (error) alert("Error sending message: " + error.message);
+    else {
+      input.value = '';
+      loadDMs();
+    }
+  }
+
+  // ========================================================
+  // 6. REALTIME SUBSCRIPTIONS
+  // ========================================================
+  function setupRealtime() {
+    supabaseClient
+      .channel('admin-tickets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
+      .subscribe();
+
+    supabaseClient
+      .channel('admin-dms')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+        loadDMs();
+        if (payload.new && payload.new.sender_role === 'user') {
+          const badge = document.getElementById('dm-notification-badge');
+          const currentCount = parseInt(badge.innerText || '0') + 1;
+          badge.innerText = currentCount;
+          badge.classList.add('show');
+        }
+      })
+      .subscribe((status) => {
+        const conn = document.getElementById('connection-status');
+        if (status === 'SUBSCRIBED') {
+          conn.innerText = '● Realtime Connected';
+          conn.style.color = 'var(--primary)';
+        }
+      });
+
+    supabaseClient
+      .channel('admin-profiles')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
+      .subscribe();
+  }
+
+  // Initialization
+  async function init() {
+    await loadUsers();
+    await loadTickets();
+    await loadDMs();
+    setupRealtime();
+  }
+
+  init();
 </script>
 </body>
 </html>
