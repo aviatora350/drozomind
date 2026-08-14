@@ -8,7 +8,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg-color: #050505;           /* Deep Pitch Black */
+      /* Enforces native dark calendar popups & browser controls */
+      color-scheme: dark;
+
+      --bg-color: #050505;           /* Pitch Black Background */
       --card-bg: #111114;            /* Dark Charcoal Card */
       --card-border: #222228;        /* Subtle Border */
       --primary: #9bf00b;            /* Drozo Lime Green Accent */
@@ -28,6 +31,15 @@
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg-color); color: var(--text-main); padding: 24px; }
 
     .container { max-width: 1200px; margin: 0 auto; }
+
+    /* Fix Chrome/Safari Browser Autofill Turning Inputs White */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: var(--text-main) !important;
+      -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
+      transition: background-color 5000s ease-in-out 0s;
+    }
 
     /* Header Nav */
     header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; margin-bottom: 24px; border-bottom: 1px solid var(--card-border); }
@@ -217,10 +229,10 @@
 
 <script>
   // ========================================================
-  // 1. SUPABASE CLIENT SETUP
+  // 1. SUPABASE CLIENT SETUP (Your Exact Credentials)
   // ========================================================
-  const SUPABASE_URL = "YOUR_SUPABASE_URL";
-  const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+  const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
 
   const { createClient } = window.supabase;
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -597,7 +609,7 @@
       .subscribe();
   }
 
-  // Initialization
+  // Initialization Sequence
   async function init() {
     await loadUsers();
     await loadTickets();
