@@ -542,7 +542,6 @@
     }
   }
 
-  // ADMIN OFFER TIME: Does NOT increment the client counter
   async function offerNewSlot(ticketId) {
     const val = document.getElementById(`slot-picker-${ticketId}`).value;
     if (!val) return alert("Select date/time first.");
@@ -555,7 +554,6 @@
     const { error } = await supabaseClient.from('tickets').update({
       status: 'Slot Offered',
       offered_time: isoTime
-      // negotiation_count is intentionally omitted so client's counter is unaffected
     }).eq('id', ticketId);
 
     if (error) {
