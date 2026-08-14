@@ -85,7 +85,7 @@
     .action-box { background: var(--input-bg); border: 1px solid var(--card-border); border-radius: 10px; padding: 16px; }
     .action-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-bottom: 12px; }
     
-    input[type="datetime-local"], input[type="text"] { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
+    input[type="datetime-local"], input[type="text"], select { width: 100%; background: var(--card-bg); border: 1px solid var(--input-border); color: var(--text-main); padding: 10px 14px; border-radius: 8px; font-size: 13px; outline: none; }
 
     .btn { padding: 10px 18px; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--primary-text); }
     .btn-accept { background-color: var(--primary); }
@@ -97,8 +97,9 @@
     .btn-demote { background-color: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); padding: 8px 16px; font-size: 12px; }
     .btn-demote:hover { background-color: var(--warning); color: #000; }
 
-    .chat-layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
-    .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
+    .chat-layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; height: 560px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
+    .user-threads { border-right: 1px solid var(--card-border); display: flex; flex-direction: column; }
+    .threads-scroll { overflow-y: auto; flex: 1; }
     .thread-item { padding: 16px; border-bottom: 1px solid var(--card-border); cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
     .thread-item:hover, .thread-item.active { background: var(--input-bg); border-left: 4px solid var(--primary); }
     .thread-email { font-weight: 700; font-size: 13px; margin-bottom: 4px; color: var(--primary); }
@@ -160,9 +161,17 @@
   <!-- DIRECT MESSAGES PANEL -->
   <div id="view-dms" class="view-panel">
     <div class="chat-layout">
-      <div class="user-threads" id="threads-list"><div class="empty-state">Loading support threads...</div></div>
+      <div class="user-threads">
+        <div style="padding: 12px; border-bottom: 1px solid var(--card-border); background: var(--input-bg);">
+          <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Start / Select Conversation</label>
+          <select id="user-chat-selector" onchange="selectThread(this.value)">
+            <option value="">-- Choose User / Self --</option>
+          </select>
+        </div>
+        <div class="threads-scroll" id="threads-list"><div class="empty-state">Loading support threads...</div></div>
+      </div>
       <div class="chat-window">
-        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a conversation thread to view messages.</div></div>
+        <div class="chat-messages" id="chat-messages-container"><div class="empty-state">Select a user or conversation thread to view messages.</div></div>
         <div class="chat-input-row">
           <input type="text" id="admin-chat-input" placeholder="Type a response..." onkeydown="if(event.key==='Enter') sendAdminMessage()">
           <button class="btn btn-accept" onclick="sendAdminMessage()">Send DM</button>
@@ -256,6 +265,25 @@
     if (error) console.error("Error fetching profiles:", error);
     allProfiles = profiles || [];
     renderAccounts();
+    populateUserChatDropdown();
+  }
+
+  function populateUserChatDropdown() {
+    const selector = document.getElementById('user-chat-selector');
+    if (!selector) return;
+    
+    selector.innerHTML = '<option value="">-- Select Account / Self --</option>';
+    allProfiles.forEach(p => {
+      const isSelf = p.id === currentAdminId;
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.innerText = `${p.email || p.id} ${isSelf ? '(You / Admin)' : ''}`;
+      selector.appendChild(opt);
+    });
+
+    if (activeChatUserId) {
+      selector.value = activeChatUserId;
+    }
   }
 
   function renderAccounts() {
@@ -478,7 +506,7 @@
 
     const userIds = Object.keys(userMap);
     if (userIds.length === 0) {
-      container.innerHTML = `<div class="empty-state">No chat messages yet.</div>`;
+      container.innerHTML = `<div class="empty-state">No chat messages yet. Use the dropdown above to initiate a chat with any account.</div>`;
       return;
     }
 
@@ -494,7 +522,7 @@
       item.innerHTML = `
         <div style="overflow: hidden;">
           <div class="thread-email" title="${userEmailDisplay}">${userEmailDisplay}</div>
-          <div class="thread-preview">${lastMsg.message}</div>
+          <div class="thread-preview">${lastMsg ? lastMsg.message : 'No messages'}</div>
         </div>
         ${hasUnread ? `<span class="green-dot" title="Unread Message"></span>` : ''}
       `;
@@ -503,20 +531,40 @@
   }
 
   async function selectThread(userId) {
+    if (!userId) return;
     activeChatUserId = userId;
+
+    const selector = document.getElementById('user-chat-selector');
+    if (selector) selector.value = userId;
+
+    // Mutate in-memory immediately to instant-remove green dot
+    allMessages.forEach(m => {
+      if (m.user_id === userId && m.sender_role === 'user') {
+        m.status = 'read';
+      }
+    });
+
+    renderThreads();
+    renderChatWindow(userId);
+
+    // Persist read status in database
     await supabaseClient
       .from('chat_messages')
       .update({ status: 'read' })
       .eq('user_id', userId)
       .eq('sender_role', 'user')
       .eq('status', 'unread');
-    loadDMs();
   }
 
   function renderChatWindow(userId) {
     const container = document.getElementById('chat-messages-container');
     container.innerHTML = '';
     const userMsgs = allMessages.filter(m => m.user_id === userId);
+
+    if (userMsgs.length === 0) {
+      container.innerHTML = `<div class="empty-state">This is the start of your message history with <strong>${getUserEmail(userId)}</strong>.</div>`;
+      return;
+    }
 
     userMsgs.forEach(m => {
       const bubble = document.createElement('div');
@@ -529,20 +577,25 @@
   }
 
   async function sendAdminMessage() {
-    if (!activeChatUserId) return alert("Select a conversation thread first.");
+    if (!activeChatUserId) return alert("Select a user or conversation thread first from the dropdown.");
     const input = document.getElementById('admin-chat-input');
     const msg = input.value.trim();
     if (!msg) return;
 
-    await supabaseClient.from('chat_messages').insert([{
+    const { error } = await supabaseClient.from('chat_messages').insert([{
       user_id: activeChatUserId,
       sender_role: 'admin',
       message: msg,
       status: 'unread'
     }]);
 
+    if (error) {
+      alert("Failed to send message: " + error.message);
+      return;
+    }
+
     input.value = '';
-    loadDMs();
+    await loadDMs();
   }
 
   /* ------------------- REALTIME SUBSCRIPTIONS ------------------- */
@@ -552,7 +605,17 @@
     supabaseClient.channel('admin-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadTickets())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadUsers())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadDMs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+        loadDMs();
+        if (activeChatUserId) {
+          supabaseClient
+            .from('chat_messages')
+            .update({ status: 'read' })
+            .eq('user_id', activeChatUserId)
+            .eq('sender_role', 'user')
+            .eq('status', 'unread');
+        }
+      })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           connBadge.className = 'connection-badge connected';
