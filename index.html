@@ -363,8 +363,8 @@
         </div>
 
         <div style="display: flex; gap: 10px;">
-          <input type="text" id="chat-user-input" placeholder="Type a message..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter') sendChatMessage()">
-          <button class="btn" style="width: 110px; margin-top:0;" onclick="sendChatMessage()">Send</button>
+          <input type="text" id="chat-user-input" placeholder="Type a message..." style="margin-bottom:0;" onkeydown="if(event.key==='Enter') sendChatMessage()" autocomplete="off">
+          <button id="user-send-btn" class="btn" style="width: 110px; margin-top:0;" onclick="sendChatMessage()">Send</button>
         </div>
       </div>
     </div>
@@ -438,6 +438,7 @@
   let authMode = 'login';
   let turnstileToken = null;
   let myTickets = [];
+  let isSendingUserMsg = false;
 
   function onTurnstileSuccess(token) { turnstileToken = token; }
 
@@ -555,20 +556,24 @@
     document.getElementById(`view-${tabName}`).classList.add('active');
 
     if (tabName === 'support') {
+      document.getElementById('support-unread-dot').classList.remove('show');
       await markAdminMessagesAsRead();
+      setTimeout(() => {
+        const input = document.getElementById('chat-user-input');
+        if (input) input.focus();
+      }, 100);
     }
   }
 
   async function markAdminMessagesAsRead() {
     if (!currentUserId) return;
+    document.getElementById('support-unread-dot').classList.remove('show');
     await supabaseClient
       .from('chat_messages')
       .update({ status: 'read' })
       .eq('user_id', currentUserId)
       .eq('sender_role', 'admin')
       .eq('status', 'unread');
-
-    document.getElementById('support-unread-dot').classList.remove('show');
   }
 
   async function loadMyTickets() {
@@ -830,8 +835,13 @@
   }
 
   async function loadChatMessages() {
+    if (!currentUserId) return;
+
     const { data: msgs } = await supabaseClient
-      .from('chat_messages').select('*').eq('user_id', currentUserId).order('created_at', { ascending: true });
+      .from('chat_messages')
+      .select('*')
+      .eq('user_id', currentUserId)
+      .order('created_at', { ascending: true });
 
     const container = document.getElementById('chat-messages-container');
     container.innerHTML = '';
@@ -858,25 +868,50 @@
 
   async function sendChatMessage() {
     const input = document.getElementById('chat-user-input');
+    const sendBtn = document.getElementById('user-send-btn');
     const msg = input.value.trim();
-    if (!msg) return;
 
-    await supabaseClient.from('chat_messages').insert([{
-      user_id: currentUserId,
-      sender_role: 'user',
-      message: msg,
-      status: 'unread'
-    }]);
+    if (!msg || isSendingUserMsg || !currentUserId) return;
 
-    input.value = '';
-    loadChatMessages();
+    try {
+      isSendingUserMsg = true;
+      sendBtn.disabled = true;
+      input.value = ''; // Instant clear
+
+      const { error } = await supabaseClient.from('chat_messages').insert([{
+        user_id: currentUserId,
+        sender_role: 'user',
+        message: msg,
+        status: 'unread'
+      }]);
+
+      if (error) {
+        alert("Failed to send message: " + error.message);
+        return;
+      }
+
+      await loadChatMessages();
+    } catch (err) {
+      console.error("Failed to send message:", err);
+    } finally {
+      isSendingUserMsg = false;
+      sendBtn.disabled = false;
+      input.disabled = false;
+      input.focus();
+    }
   }
 
   async function checkUnreadAdminMessages() {
-    if (document.getElementById('view-support').classList.contains('active')) {
+    const isSupportTab = document.getElementById('view-support').classList.contains('active');
+    const dot = document.getElementById('support-unread-dot');
+
+    if (isSupportTab) {
+      dot.classList.remove('show');
       await markAdminMessagesAsRead();
       return;
     }
+
+    if (!currentUserId) return;
 
     const { data: unread } = await supabaseClient
       .from('chat_messages')
@@ -885,9 +920,11 @@
       .eq('sender_role', 'admin')
       .eq('status', 'unread');
 
-    const dot = document.getElementById('support-unread-dot');
-    if (unread && unread.length > 0) dot.classList.add('show');
-    else dot.classList.remove('show');
+    if (unread && unread.length > 0) {
+      dot.classList.add('show');
+    } else {
+      dot.classList.remove('show');
+    }
   }
 
   function subscribeRealtime() {
