@@ -47,6 +47,8 @@
     .ticket-card.cancelled, .ticket-card.closed { border-left-color: var(--danger); }
 
     .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    
     .status-badge { padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--primary-text); background: var(--neutral); }
     .status-badge.accepted { background: var(--primary); }
     .status-badge.offered { background: var(--warning); }
@@ -64,6 +66,8 @@
     .btn-accept { background-color: var(--primary); }
     .btn-offer { background-color: var(--warning); color: #000; }
     .btn-cancel { background-color: var(--danger); color: #fff; }
+    .btn-delete { background-color: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+    .btn-delete:hover { background-color: var(--danger); color: #fff; }
 
     .chat-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; height: 520px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; overflow: hidden; }
     .user-threads { border-right: 1px solid var(--card-border); overflow-y: auto; }
@@ -210,7 +214,10 @@
       card.innerHTML = `
         <div class="ticket-header">
           <strong style="font-size: 16px;">Ticket #TCK-${ticket.ticket_number}</strong>
-          <span class="status-badge ${statusKey}">${ticket.status}</span>
+          <div class="header-actions">
+            <span class="status-badge ${statusKey}">${ticket.status}</span>
+            <button class="btn btn-delete" onclick="deleteTicket('${ticket.id}')">🗑️ Delete</button>
+          </div>
         </div>
 
         <div class="details-grid">
@@ -234,10 +241,6 @@
           <div class="action-row">
             <div><label>Close Session (Reason):</label><input type="text" id="cancel-reason-${ticket.id}" placeholder="Specify reason..."></div>
             <button class="btn btn-cancel" style="margin-top:16px;" onclick="closeBooking('${ticket.id}')">Close Session</button>
-          </div>
-          <hr style="border:0; border-top:1px solid var(--card-border); margin:12px 0;">
-          <div style="display:flex; justify-content:flex-end;">
-            <button class="btn btn-cancel" onclick="deleteTicket('${ticket.id}')">🗑️ Delete Ticket</button>
           </div>
         </div>
       `;
@@ -281,9 +284,18 @@
   }
 
   async function deleteTicket(ticketId) {
-    if (!confirm("Are you sure you want to permanently delete this ticket?")) return;
-    await supabaseClient.from('tickets').delete().eq('id', ticketId);
-    loadTickets();
+    if (!confirm("Are you sure you want to permanently delete this ticket record?")) return;
+
+    const { error } = await supabaseClient
+      .from('tickets')
+      .delete()
+      .eq('id', ticketId);
+
+    if (error) {
+      alert("Failed to delete ticket: " + error.message);
+    } else {
+      loadTickets();
+    }
   }
 
   async function loadUsers() {
