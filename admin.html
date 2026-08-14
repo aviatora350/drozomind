@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard - Ticket & Session Control</title>
-  <!-- Supabase JS Client -->
+  <!-- Supabase JS Client CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -84,6 +84,7 @@
     .btn-close { background-color: var(--neutral); }
 
     .empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 16px; }
+    .error-notice { background: #fde8e8; color: var(--danger); border: 1px solid #f8b4b4; padding: 16px; border-radius: 8px; margin-bottom: 16px; display: none; }
   </style>
 </head>
 <body>
@@ -91,8 +92,10 @@
 <div class="container">
   <header>
     <h1>Admin Booking & Session Control</h1>
-    <span id="connection-status" style="font-size: 12px; color: var(--success); font-weight: bold;">● Realtime Connected</span>
+    <span id="connection-status" style="font-size: 12px; color: var(--warning); font-weight: bold;">● Connecting...</span>
   </header>
+
+  <div id="error-banner" class="error-notice"></div>
 
   <!-- Quick Overview Stats -->
   <div class="stats-bar">
@@ -131,32 +134,54 @@
 
 <script>
   // ========================================================
-  // 1. CONFIGURATION & SUPABASE INITIALIZATION
+  // 1. SUPABASE INITIALIZATION (FIXED VARIABLE SHADOWING)
   // ========================================================
   const SUPABASE_URL = "YOUR_SUPABASE_URL";
   const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Use window.supabase destructuring to avoid variable name collision
+  const { createClient } = window.supabase;
+  const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let currentFilter = 'all';
   let allTickets = [];
+
+  function showError(msg) {
+    const banner = document.getElementById('error-banner');
+    banner.style.display = 'block';
+    banner.innerText = msg;
+  }
+
+  function clearError() {
+    const banner = document.getElementById('error-banner');
+    banner.style.display = 'none';
+    banner.innerText = '';
+  }
 
   // ========================================================
   // 2. FETCH AND RENDER TICKETS
   // ========================================================
   async function loadTickets() {
-    const { data: tickets, error } = await supabase
-      .from('tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
+    clearError();
+    try {
+      const { data: tickets, error } = await supabaseClient
+        .from('tickets')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">Error loading tickets: ${error.message}</div>`;
-      return;
+      if (error) {
+        showError('Supabase Error: ' + error.message);
+        document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">Failed to load tickets. Check console or Supabase configuration.</div>`;
+        return;
+      }
+
+      allTickets = tickets || [];
+      updateStats();
+      renderTickets();
+    } catch (err) {
+      showError('Script Error: ' + err.message);
+      document.getElementById('tickets-list').innerHTML = `<div class="empty-state" style="color: var(--danger);">An unexpected error occurred.</div>`;
     }
-
-    allTickets = tickets || [];
-    updateStats();
-    renderTickets();
   }
 
   function updateStats() {
@@ -306,14 +331,13 @@
   // 3. ACTION HANDLERS
   // ========================================================
 
-  // 1. Accept Slot
   async function acceptTicket(ticketId, chosenTime) {
     if (!chosenTime) {
       alert("No valid preferred or offered time exists to accept. Please offer a custom slot first.");
       return;
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('tickets')
       .update({
         status: 'Accepted',
@@ -325,7 +349,6 @@
     else loadTickets();
   }
 
-  // 2. Offer New Slot
   async function offerNewSlot(ticketId) {
     const input = document.getElementById(`slot-input-${ticketId}`);
     if (!input || !input.value) {
@@ -338,7 +361,7 @@
       timeStyle: 'short'
     });
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('tickets')
       .update({
         status: 'Slot Offered',
@@ -350,17 +373,16 @@
     else loadTickets();
   }
 
-  // 3. Cancel Booking with Reason
   async function cancelBooking(ticketId) {
     const input = document.getElementById(`cancel-reason-${ticketId}`);
     const reason = input ? input.value.trim() : '';
-    
+
     if (!reason) {
       alert('Please enter a cancellation reason.');
       return;
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('tickets')
       .update({
         status: 'Cancelled',
@@ -372,7 +394,6 @@
     else loadTickets();
   }
 
-  // 4. Close Session
   async function closeSession(ticketId) {
     const input = document.getElementById(`close-reason-${ticketId}`);
     const reason = input ? input.value.trim() : '';
@@ -382,7 +403,7 @@
       return;
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('tickets')
       .update({
         status: 'Closed',
@@ -397,7 +418,7 @@
   // ========================================================
   // 4. REALTIME SUBSCRIPTION
   // ========================================================
-  supabase
+  supabaseClient
     .channel('public:tickets')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
       loadTickets();
