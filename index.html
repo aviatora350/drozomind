@@ -879,12 +879,12 @@
       sendBtn.disabled = true;
       input.value = '';
 
-      // User sending a message is auto-marked as read on their side
+      // User sending a message flags status as 'unread' for Admin to read
       const { error } = await supabaseClient.from('chat_messages').insert([{
         user_id: currentUserId,
         sender_role: 'user',
         message: msg,
-        status: 'read'
+        status: 'unread'
       }]);
 
       if (error) {
