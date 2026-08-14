@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Drozo Mind Therapy - Client Portal</title>
-  <!-- Supabase JS CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Cloudflare Turnstile API -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     :root {
       color-scheme: dark;
@@ -30,21 +31,11 @@
       background: var(--bg-color); 
       color: var(--text-main); 
       padding: 16px; 
-      padding-bottom: 100px; /* Space for bottom nav bar */
+      padding-bottom: 100px;
     }
 
     .container { max-width: 600px; margin: 0 auto; }
 
-    /* Autofill dark mode override */
-    input:-webkit-autofill,
-    input:-webkit-autofill:hover, 
-    input:-webkit-autofill:focus {
-      -webkit-text-fill-color: var(--text-main) !important;
-      -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset !important;
-      transition: background-color 5000s ease-in-out 0s;
-    }
-
-    /* --- TOP HEADER --- */
     header {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -57,35 +48,21 @@
     }
     .header-info { display: flex; align-items: center; gap: 12px; }
     .brand-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      border: 1px solid var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--primary);
-      font-size: 18px;
+      width: 38px; height: 38px; border-radius: 10px;
+      border: 1px solid var(--primary); display: flex;
+      align-items: center; justify-content: center;
+      color: var(--primary); font-size: 18px;
     }
     .brand-title { font-size: 17px; font-weight: 700; color: var(--primary); }
     .brand-email { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
     .btn-admin {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: transparent;
-      color: var(--primary);
-      border: 1px solid var(--primary);
-      padding: 8px 16px;
-      border-radius: 12px;
-      text-decoration: none;
-      font-size: 13px;
-      font-weight: 600;
-      transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+      background: transparent; color: var(--primary);
+      border: 1px solid var(--primary); padding: 8px 16px;
+      border-radius: 12px; text-decoration: none; font-size: 13px; font-weight: 600;
     }
     .btn-admin:hover { background: var(--primary); color: var(--primary-text); }
 
-    /* --- CARDS & PANELS --- */
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
@@ -93,40 +70,34 @@
       padding: 22px;
       margin-bottom: 16px;
     }
-    .card-title {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: var(--text-main);
-    }
+    .card-title { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; margin-bottom: 8px; }
     .card-subtitle { font-size: 13px; color: var(--text-muted); line-height: 1.5; }
 
-    /* --- ACTIVE SESSION PIPELINE STEPPER --- */
+    .cancellation-banner {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid var(--danger);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
     .pipeline-list { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
     .pipeline-step { display: flex; align-items: center; gap: 14px; font-size: 15px; font-weight: 600; color: var(--text-muted); }
     .pipeline-step.active { color: var(--primary); }
     
     .step-circle {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: 2px solid var(--text-muted);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      flex-shrink: 0;
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2px solid var(--text-muted); display: flex;
+      align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0;
     }
     .pipeline-step.active .step-circle {
-      border-color: var(--primary);
-      background: var(--primary);
-      color: var(--primary-text);
+      border-color: var(--primary); background: var(--primary); color: var(--primary-text);
     }
 
-    /* Ticket Details Card Inside Pipeline */
     .pipeline-ticket-box {
       background: var(--input-bg);
       border: 1px solid var(--card-border);
@@ -139,178 +110,155 @@
       gap: 6px;
     }
     .status-highlight { color: var(--primary); font-weight: 700; }
-    .status-highlight.cancelled { color: var(--danger); }
     .status-highlight.offered { color: var(--warning); }
 
-    /* --- FORM CONTROLS --- */
     label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; margin-top: 12px; }
-    input[type="text"], input[type="datetime-local"], textarea {
-      width: 100%;
-      background: var(--input-bg);
-      border: 1px solid var(--input-border);
-      color: var(--text-main);
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 14px;
-      outline: none;
+    input[type="email"], input[type="password"], input[type="text"], input[type="datetime-local"], textarea {
+      width: 100%; background: var(--input-bg); border: 1px solid var(--input-border);
+      color: var(--text-main); padding: 12px; border-radius: 10px; font-size: 14px; outline: none;
     }
     input:focus, textarea:focus { border-color: var(--primary); }
 
     .btn {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 14px;
-      cursor: pointer;
-      background: var(--primary);
-      color: var(--primary-text);
-      margin-top: 14px;
-      transition: opacity 0.2s;
+      width: 100%; padding: 12px; border: none; border-radius: 10px;
+      font-weight: 700; font-size: 14px; cursor: pointer;
+      background: var(--primary); color: var(--primary-text); margin-top: 14px;
     }
     .btn:hover { opacity: 0.9; }
     .btn-secondary { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); }
     .btn-danger { background: var(--danger); color: #fff; }
+    .btn-sm { width: auto; padding: 6px 14px; margin-top: 0; font-size: 12px; }
 
-    /* --- TAB VIEWS --- */
     .tab-view { display: none; }
     .tab-view.active { display: block; }
 
-    /* --- DIRECT MESSAGES support --- */
     .chat-box {
-      background: var(--input-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 12px;
-      height: 300px;
-      overflow-y: auto;
-      padding: 16px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      background: var(--input-bg); border: 1px solid var(--card-border);
+      border-radius: 12px; height: 300px; overflow-y: auto; padding: 16px;
+      margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px;
     }
     .chat-bubble { max-width: 80%; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.4; }
     .chat-bubble.user { background: var(--card-bg); border: 1px solid var(--card-border); align-self: flex-end; color: var(--text-main); }
     .chat-bubble.admin { background: var(--primary); align-self: flex-start; color: var(--primary-text); font-weight: 600; }
 
-    /* --- BOTTOM FIXED NAVIGATION BAR --- */
     .bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 70px;
-      background: #08080b;
-      border-top: 1px solid var(--card-border);
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 1000;
+      position: fixed; bottom: 0; left: 0; right: 0; height: 70px;
+      background: #08080b; border-top: 1px solid var(--card-border);
+      display: flex; justify-space-around: align-items: center; z-index: 1000;
     }
     .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 4px;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      width: 20%;
-      transition: color 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      background: transparent; border: none; color: var(--text-muted);
+      font-size: 11px; font-weight: 600; cursor: pointer; width: 20%; position: relative;
     }
     .nav-item svg { width: 20px; height: 20px; fill: currentColor; }
     .nav-item.active { color: var(--primary); }
 
+    .unread-dot {
+      position: absolute; top: 2px; right: 28%;
+      width: 9px; height: 9px; background: var(--primary);
+      border-radius: 50%; box-shadow: 0 0 8px var(--primary); display: none;
+    }
+    .unread-dot.show { display: block; }
+
     .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; padding: 20px 0; }
+
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(8px); z-index: 2000; display: flex;
+      align-items: center; justify-content: center; padding: 16px;
+    }
+    .auth-tab-row {
+      display: flex; background: var(--input-bg); border-radius: 10px;
+      padding: 4px; margin-bottom: 16px; border: 1px solid var(--card-border);
+    }
+    .auth-tab-btn {
+      flex: 1; padding: 8px; border: none; background: transparent;
+      color: var(--text-muted); font-weight: 600; font-size: 13px;
+      border-radius: 8px; cursor: pointer;
+    }
+    .auth-tab-btn.active { background: var(--primary); color: var(--primary-text); }
   </style>
 </head>
 <body>
 
+<!-- AUTH / LOGIN MODAL -->
+<div id="auth-modal" class="modal-overlay">
+  <div class="card" style="width:100%; max-width:420px; margin-bottom:0;">
+    <div style="text-align:center; margin-bottom:16px;">
+      <div class="brand-icon" style="margin: 0 auto 10px auto; width:48px; height:48px; font-size:22px;">💚</div>
+      <h2 style="font-size:20px; font-weight:700; color:var(--primary);">Drozo Mind Therapy</h2>
+      <p class="card-subtitle">Sign in or create an account to manage session bookings.</p>
+    </div>
+
+    <div class="auth-tab-row">
+      <button class="auth-tab-btn active" id="tab-login" onclick="setAuthMode('login')">Sign In</button>
+      <button class="auth-tab-btn" id="tab-signup" onclick="setAuthMode('signup')">Create Account</button>
+    </div>
+
+    <div>
+      <label>Email Address</label>
+      <input type="email" id="auth-email" placeholder="name@example.com">
+
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••">
+
+      <!-- Cloudflare Turnstile Verification Widget -->
+      <div style="margin-top: 16px; display: flex; justify-content: center;">
+        <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess"></div>
+      </div>
+
+      <button class="btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Sign In</button>
+    </div>
+  </div>
+</div>
+
 <div class="container">
 
-  <!-- TOP HEADER -->
   <header>
     <div class="header-info">
       <div class="brand-icon">💚</div>
       <div>
         <div class="brand-title">Drozo Mind Therapy</div>
-        <div class="brand-email" id="header-user-email">aviatorrudra@gmail.com</div>
+        <div class="brand-email" id="header-user-email">Loading...</div>
       </div>
     </div>
-    <a href="admin.html" class="btn-admin">
-      🛡️ Admin Panel
-    </a>
+    <a href="admin.html" class="btn-admin">🛡️ Admin Panel</a>
   </header>
 
-  <!-- AUTH / LOGIN MODAL (Shows if email is not logged in) -->
-  <div id="auth-modal" class="card" style="display: none;">
-    <div class="card-title">🔑 Account Access</div>
-    <p class="card-subtitle">Enter your email address to connect to your therapy portal.</p>
-    <label>Email Address</label>
-    <input type="text" id="login-email-input" placeholder="e.g. aviatorrudra@gmail.com">
-    <button class="btn" onclick="loginUser()">Sign In to Portal</button>
-  </div>
+  <div id="cancellation-alert-container"></div>
 
-  <!-- MAIN TAB CONTENT VIEWS -->
   <main id="portal-body">
 
-    <!-- 1. OVERVIEW TAB -->
+    <!-- OVERVIEW TAB -->
     <div id="view-overview" class="tab-view active">
-      <!-- Welcome Banner -->
       <div class="card">
-        <div class="card-title">
-          <span style="color: var(--primary);">✨</span> Welcome to Drozo Mind Therapy
-        </div>
-        <div class="card-subtitle">
-          Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.
-        </div>
+        <div class="card-title"><span style="color: var(--primary);">✨</span> Welcome to Drozo Mind Therapy</div>
+        <div class="card-subtitle">Schedule therapy sessions, coordinate with administrators, and track real-time booking progress.</div>
       </div>
 
-      <!-- Active Session Pipeline -->
       <div class="card">
-        <div class="card-title">
-          <span style="color: var(--primary);">📈</span> Active Session Pipeline
-        </div>
+        <div class="card-title"><span style="color: var(--primary);">📈</span> Active Session Pipeline</div>
 
         <div class="pipeline-list">
-          <div class="pipeline-step" id="step-1">
-            <div class="step-circle" id="circle-1">1</div>
-            <span>1. Submitted</span>
-          </div>
-
-          <div class="pipeline-step" id="step-2">
-            <div class="step-circle" id="circle-2">2</div>
-            <span>2. Slot Offered</span>
-          </div>
-
-          <div class="pipeline-step" id="step-3">
-            <div class="step-circle" id="circle-3">3</div>
-            <span>3. Accepted & Scheduled</span>
-          </div>
-
-          <div class="pipeline-step" id="step-4">
-            <div class="step-circle" id="circle-4">4</div>
-            <span>4. Confirmed</span>
-          </div>
+          <div class="pipeline-step" id="step-1"><div class="step-circle" id="circle-1">1</div><span>1. Submitted</span></div>
+          <div class="pipeline-step" id="step-2"><div class="step-circle" id="circle-2">2</div><span>2. Slot Offered</span></div>
+          <div class="pipeline-step" id="step-3"><div class="step-circle" id="circle-3">3</div><span>3. Accepted & Scheduled</span></div>
+          <div class="pipeline-step" id="step-4"><div class="step-circle" id="circle-4">4</div><span>4. Confirmed</span></div>
         </div>
 
-        <!-- Active Ticket Detail Box -->
         <div id="pipeline-active-card" class="pipeline-ticket-box">
           <div class="empty-state">No active booking found. Tap <strong>Book</strong> below to schedule a session.</div>
         </div>
       </div>
     </div>
 
-    <!-- 2. BOOK SESSION TAB -->
+    <!-- BOOK TAB -->
     <div id="view-book" class="tab-view">
       <div class="card">
         <div class="card-title">📅 Schedule a Session</div>
         <p class="card-subtitle">Select your preferred date and time for your therapy appointment.</p>
-        
+
         <label>Preferred Date & Time</label>
         <input type="datetime-local" id="book-datetime">
 
@@ -321,7 +269,7 @@
       </div>
     </div>
 
-    <!-- 3. SUPPORT / DM TAB -->
+    <!-- SUPPORT TAB -->
     <div id="view-support" class="tab-view">
       <div class="card">
         <div class="card-title">💬 Direct Support</div>
@@ -338,7 +286,7 @@
       </div>
     </div>
 
-    <!-- 4. SESSIONS HISTORY TAB -->
+    <!-- SESSIONS TAB -->
     <div id="view-sessions" class="tab-view">
       <div class="card">
         <div class="card-title">🕒 Session History</div>
@@ -349,7 +297,7 @@
       </div>
     </div>
 
-    <!-- 5. PROFILE TAB -->
+    <!-- PROFILE TAB -->
     <div id="view-profile" class="tab-view">
       <div class="card">
         <div class="card-title">👤 User Profile</div>
@@ -359,13 +307,12 @@
         <label>User ID</label>
         <input type="text" id="profile-id-display" readonly style="font-family: monospace; opacity: 0.6;">
 
-        <button class="btn btn-danger" style="margin-top: 20px;" onclick="logoutUser()">Switch / Logout Account</button>
+        <button class="btn btn-danger" style="margin-top: 20px;" onclick="logoutUser()">Log Out</button>
       </div>
     </div>
 
   </main>
 
-  <!-- BOTTOM FIXED NAVIGATION BAR -->
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="switchNavTab('overview', this)">
       <svg viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
@@ -375,7 +322,8 @@
       <svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z"/></svg>
       Book
     </button>
-    <button class="nav-item" onclick="switchNavTab('support', this)">
+    <button class="nav-item" id="nav-support-btn" onclick="switchNavTab('support', this)">
+      <span class="unread-dot" id="support-unread-dot"></span>
       <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
       Support
     </button>
@@ -392,7 +340,6 @@
 </div>
 
 <script>
-  // --- 1. SUPABASE CLIENT SETUP ---
   const SUPABASE_URL = "https://qhwtjzpqolhslhancngs.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_Hm0_jgynuWcA01ckhAs1YA_jjJfNmbL";
 
@@ -400,151 +347,205 @@
   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let currentUserId = null;
-  let currentUserEmail = localStorage.getItem('drozo_client_email') || 'aviatorrudra@gmail.com';
+  let currentUserEmail = null;
+  let authMode = 'login';
+  let turnstileToken = null;
   let myTickets = [];
 
-  // --- 2. INITIALIZATION & AUTH ---
+  function onTurnstileSuccess(token) {
+    turnstileToken = token;
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+    document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+    document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Sign In' : 'Create Account';
+  }
+
+  async function handleAuthSubmit() {
+    const email = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value.trim();
+
+    if (!email || !password) return alert("Please enter both email and password.");
+
+    const options = turnstileToken ? { captchaToken: turnstileToken } : {};
+
+    if (authMode === 'signup') {
+      const { data, error } = await supabaseClient.auth.signUp({ email, password, options });
+      if (error) return alert("Sign-Up Error: " + error.message);
+      
+      // Auto-create profile record
+      if (data.user) {
+        await supabaseClient.from('profiles').upsert([{ 
+          id: data.user.id, 
+          email: email, 
+          role: email.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user' 
+        }]);
+      }
+      alert("Account created successfully!");
+    } else {
+      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password, options });
+      if (error) return alert("Login Error: " + error.message);
+    }
+
+    init();
+  }
+
   async function init() {
-    if (!currentUserEmail) {
-      document.getElementById('auth-modal').style.display = 'block';
-      document.getElementById('portal-body').style.display = 'none';
+    const { data: { session } } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+      document.getElementById('auth-modal').style.display = 'flex';
       return;
+    }
+
+    document.getElementById('auth-modal').style.display = 'none';
+    currentUserId = session.user.id;
+    currentUserEmail = session.user.email;
+
+    // Ensure profile exists in profiles table
+    let { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', currentUserId).maybeSingle();
+    if (!profile) {
+      await supabaseClient.from('profiles').upsert([{
+        id: currentUserId,
+        email: currentUserEmail,
+        role: currentUserEmail.toLowerCase() === 'aviatorrudra@gmail.com' ? 'admin' : 'user'
+      }]);
     }
 
     document.getElementById('header-user-email').innerText = currentUserEmail;
     document.getElementById('profile-email-display').value = currentUserEmail;
-
-    // Check / Fetch User Profile ID from Supabase
-    let { data: profile } = await supabaseClient.from('profiles').select('*').eq('email', currentUserEmail).single();
-
-    if (!profile) {
-      const { data: newProfile, error } = await supabaseClient
-        .from('profiles')
-        .insert([{ email: currentUserEmail, role: 'user' }])
-        .select()
-        .single();
-      
-      if (error) {
-        alert("Login Error: " + error.message);
-        return;
-      }
-      profile = newProfile;
-    }
-
-    currentUserId = profile.id;
     document.getElementById('profile-id-display').value = currentUserId;
 
     await loadMyTickets();
     await loadChatMessages();
+    checkUnreadAdminMessages();
     subscribeRealtime();
   }
 
-  function loginUser() {
-    const email = document.getElementById('login-email-input').value.trim();
-    if (!email) return alert("Please enter an email.");
-    localStorage.setItem('drozo_client_email', email);
-    currentUserEmail = email;
+  async function logoutUser() {
+    await supabaseClient.auth.signOut();
     location.reload();
   }
 
-  function logoutUser() {
-    localStorage.removeItem('drozo_client_email');
-    location.reload();
-  }
-
-  // --- 3. BOTTOM TAB NAVIGATION ---
-  function switchNavTab(tabName, btnEl) {
+  async function switchNavTab(tabName, btnEl) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
 
     btnEl.classList.add('active');
     document.getElementById(`view-${tabName}`).classList.add('active');
+
+    if (tabName === 'support') {
+      await supabaseClient
+        .from('chat_messages')
+        .update({ status: 'read' })
+        .eq('user_id', currentUserId)
+        .eq('sender_role', 'admin')
+        .eq('status', 'unread');
+
+      document.getElementById('support-unread-dot').classList.remove('show');
+    }
   }
 
-  // --- 4. TIME FORMATTING ---
   function formatInputTime(rawDatetime) {
     if (!rawDatetime) return null;
-    const d = new Date(rawDatetime);
-    return d.toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
+    return new Date(rawDatetime).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' });
   }
 
-  // --- 5. TICKET MANAGEMENT & PIPELINE UPDATES ---
   async function loadMyTickets() {
-    const { data: tickets, error } = await supabaseClient
+    const { data: tickets } = await supabaseClient
       .from('tickets')
       .select('*')
       .eq('user_id', currentUserId)
       .order('created_at', { ascending: false });
 
-    if (error) return;
     myTickets = tickets || [];
-
+    renderCancellationAlerts();
     renderActivePipeline();
     renderHistorySessions();
+  }
+
+  function renderCancellationAlerts() {
+    const container = document.getElementById('cancellation-alert-container');
+    container.innerHTML = '';
+
+    const cancelledTicket = myTickets.find(t => 
+      (t.status === 'Cancelled' || t.status === 'Closed') && 
+      !localStorage.getItem(`dismissed_ticket_${t.id}`)
+    );
+
+    if (cancelledTicket) {
+      const alertBox = document.createElement('div');
+      alertBox.className = 'cancellation-banner';
+      alertBox.innerHTML = `
+        <div>
+          <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed by Admin</strong>
+          <p style="font-size: 13px; margin-top: 4px; line-height: 1.4;">
+            Your session <strong>#TCK-${cancelledTicket.ticket_number}</strong> was closed. <br>
+            <strong>Reason:</strong> ${cancelledTicket.admin_comment || 'No specific reason provided.'}
+          </p>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="dismissCancellationNotice('${cancelledTicket.id}')">Dismiss</button>
+      `;
+      container.appendChild(alertBox);
+    }
+  }
+
+  function dismissCancellationNotice(ticketId) {
+    localStorage.setItem(`dismissed_ticket_${ticketId}`, 'true');
+    renderCancellationAlerts();
+    renderActivePipeline();
   }
 
   function renderActivePipeline() {
     const pipelineContainer = document.getElementById('pipeline-active-card');
     
-    // Reset Stepper CSS
     for (let i = 1; i <= 4; i++) {
-      const step = document.getElementById(`step-${i}`);
-      const circle = document.getElementById(`circle-${i}`);
-      step.classList.remove('active');
-      circle.innerText = i;
+      document.getElementById(`step-${i}`).classList.remove('active');
+      document.getElementById(`circle-${i}`).innerText = i;
     }
 
-    if (myTickets.length === 0) {
-      pipelineContainer.innerHTML = `<div class="empty-state">No active booking. Tap <strong>Book</strong> below to schedule a session.</div>`;
+    const activeTicket = myTickets.find(t => t.status !== 'Cancelled' && t.status !== 'Closed');
+
+    if (!activeTicket) {
+      pipelineContainer.innerHTML = `<div class="empty-state">No active booking found. Tap <strong>Book</strong> below to schedule a session.</div>`;
       return;
     }
 
-    const latestTicket = myTickets[0]; // Most recent ticket
-    const status = latestTicket.status || 'Submitted';
+    const status = activeTicket.status || 'Submitted';
 
-    // Map status to Stepper Step
     let stepNum = 1;
     if (status === 'Slot Offered') stepNum = 2;
     else if (status === 'Accepted' || status === 'Scheduled') stepNum = 3;
     else if (status === 'Confirmed') stepNum = 4;
 
-    // Highlight active pipeline steps
     for (let i = 1; i <= stepNum; i++) {
       const step = document.getElementById(`step-${i}`);
       const circle = document.getElementById(`circle-${i}`);
       step.classList.add('active');
-      if (i < stepNum || status === 'Confirmed') {
-        circle.innerText = '✓';
-      }
+      if (i < stepNum || status === 'Confirmed') circle.innerText = '✓';
     }
 
-    // Determine status text CSS class
-    let statusClass = 'status-highlight';
-    if (status === 'Cancelled') statusClass = 'status-highlight cancelled';
-    else if (status === 'Slot Offered') statusClass = 'status-highlight offered';
-
-    // Render Active Card
     pipelineContainer.innerHTML = `
-      <div><strong>Ticket Ref:</strong> TCK-${latestTicket.ticket_number}</div>
-      <div><strong>Status:</strong> <span class="${statusClass}">${status}</span></div>
-      ${latestTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${latestTicket.pref_time}</div>` : ''}
-      ${latestTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${latestTicket.offered_time}</div>` : ''}
-      ${latestTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${latestTicket.accepted_time}</div>` : ''}
-      ${latestTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${latestTicket.admin_comment}</em></div>` : ''}
-      <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">Negotiation Attempt: ${latestTicket.negotiation_count || 0}/2</div>
+      <div><strong>Ticket Ref:</strong> TCK-${activeTicket.ticket_number}</div>
+      <div><strong>Status:</strong> <span class="status-highlight ${status === 'Slot Offered' ? 'offered' : ''}">${status}</span></div>
+      ${activeTicket.pref_time ? `<div><strong>Requested Slot:</strong> ${activeTicket.pref_time}</div>` : ''}
+      ${activeTicket.offered_time ? `<div><strong>Offered Slot:</strong> ${activeTicket.offered_time}</div>` : ''}
+      ${activeTicket.accepted_time ? `<div><strong>Confirmed Time:</strong> ${activeTicket.accepted_time}</div>` : ''}
+      ${activeTicket.admin_comment ? `<div style="color:var(--text-muted); margin-top:4px;"><em>Note: ${activeTicket.admin_comment}</em></div>` : ''}
 
-      <!-- Action Panel when Admin Offers New Slot -->
       ${status === 'Slot Offered' ? `
         <div style="background: var(--card-bg); border: 1px solid var(--card-border); padding: 12px; border-radius: 10px; margin-top: 12px;">
-          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${latestTicket.offered_time}).</p>
-          <button class="btn" style="margin-top:0; margin-bottom:10px;" onclick="acceptOfferedSlot('${latestTicket.id}', '${latestTicket.offered_time}')">Accept Proposed Slot</button>
+          <p style="color: var(--warning); font-weight:700; margin-bottom: 8px;">Admin proposed a new time slot (${activeTicket.offered_time}).</p>
+          <button class="btn" style="margin-top:0; margin-bottom:10px;" onclick="acceptOfferedSlot('${activeTicket.id}', '${activeTicket.offered_time}')">Accept Proposed Slot</button>
           
           <label>Or Counter-Propose Another Time:</label>
           <input type="datetime-local" id="counter-time-input">
           
           <div style="display:flex; gap:10px; margin-top:10px;">
-            <button class="btn btn-secondary" style="margin-top:0;" onclick="proposeNewTime('${latestTicket.id}', ${latestTicket.negotiation_count || 0})">Submit Time</button>
-            <button class="btn btn-danger" style="margin-top:0;" onclick="cancelTicket('${latestTicket.id}')">Cancel</button>
+            <button class="btn btn-secondary" style="margin-top:0;" onclick="proposeNewTime('${activeTicket.id}', ${activeTicket.negotiation_count || 0})">Submit Time</button>
+            <button class="btn btn-danger" style="margin-top:0;" onclick="cancelTicket('${activeTicket.id}')">Cancel Request</button>
           </div>
         </div>
       ` : ''}
@@ -574,7 +575,6 @@
     });
   }
 
-  // --- 6. USER ACTION HANDLERS ---
   async function submitBooking() {
     const rawTime = document.getElementById('book-datetime').value;
     const notes = document.getElementById('book-notes').value.trim();
@@ -584,8 +584,8 @@
     const formattedTime = formatInputTime(rawTime);
     const ticketNum = Math.floor(100000 + Math.random() * 900000);
 
-    const { error } = await supabaseClient.from('tickets').insert([{
-      ticket_number: ticketNum,
+    await supabaseClient.from('tickets').insert([{
+      ticket_number: ticketNum.toString(),
       user_id: currentUserId,
       pref_time: formattedTime,
       notes: notes,
@@ -593,41 +593,30 @@
       negotiation_count: 0
     }]);
 
-    if (error) alert("Error: " + error.message);
-    else {
-      alert("Session requested successfully!");
-      document.getElementById('book-datetime').value = '';
-      document.getElementById('book-notes').value = '';
-      
-      // Switch back to Overview tab
-      switchNavTab('overview', document.querySelectorAll('.nav-item')[0]);
-      loadMyTickets();
-    }
+    alert("Session requested successfully!");
+    document.getElementById('book-datetime').value = '';
+    document.getElementById('book-notes').value = '';
+    switchNavTab('overview', document.querySelectorAll('.nav-item')[0]);
+    loadMyTickets();
   }
 
   async function acceptOfferedSlot(ticketId, offeredTime) {
-    await supabaseClient.from('tickets').update({
-      status: 'Accepted',
-      accepted_time: offeredTime
-    }).eq('id', ticketId);
+    await supabaseClient.from('tickets').update({ status: 'Accepted', accepted_time: offeredTime }).eq('id', ticketId);
     loadMyTickets();
   }
 
   async function proposeNewTime(ticketId, currentCount) {
     const rawVal = document.getElementById('counter-time-input').value;
-    if (!rawVal) return alert("Select a date and time first.");
+    if (!rawVal) return alert("Select date and time.");
 
     const newCount = currentCount + 1;
-
-    // AUTO-CANCEL RULE: Maximum 2 negotiation changes
     if (newCount >= 2) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
-        admin_comment: 'Auto-cancelled: Reached maximum negotiation limit (2 attempts).',
+        admin_comment: 'Auto-cancelled: Maximum negotiation limit (2 attempts) reached.',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      
-      alert("Session cancelled automatically because the maximum limit of 2 time adjustments was reached.");
+      alert("Session cancelled automatically because maximum negotiation attempts were reached.");
     } else {
       const formatted = formatInputTime(rawVal);
       await supabaseClient.from('tickets').update({
@@ -636,28 +625,18 @@
         offered_time: null,
         negotiation_count: newCount
       }).eq('id', ticketId);
-
-      alert("New proposed time submitted to Admin for review.");
     }
-
     loadMyTickets();
   }
 
   async function cancelTicket(ticketId) {
-    await supabaseClient.from('tickets').update({
-      status: 'Cancelled',
-      admin_comment: 'Cancelled by client.'
-    }).eq('id', ticketId);
+    await supabaseClient.from('tickets').update({ status: 'Cancelled', admin_comment: 'Cancelled by client.' }).eq('id', ticketId);
     loadMyTickets();
   }
 
-  // --- 7. DIRECT MESSAGING SUPPORT ---
   async function loadChatMessages() {
     const { data: msgs } = await supabaseClient
-      .from('chat_messages')
-      .select('*')
-      .eq('user_id', currentUserId)
-      .order('created_at', { ascending: true });
+      .from('chat_messages').select('*').eq('user_id', currentUserId).order('created_at', { ascending: true });
 
     const container = document.getElementById('chat-messages-container');
     container.innerHTML = '';
@@ -694,12 +673,26 @@
     loadChatMessages();
   }
 
-  // --- 8. REALTIME WEBSOCKET SUBSCRIPTIONS ---
+  async function checkUnreadAdminMessages() {
+    const { data: unread } = await supabaseClient
+      .from('chat_messages')
+      .select('id')
+      .eq('user_id', currentUserId)
+      .eq('sender_role', 'admin')
+      .eq('status', 'unread');
+
+    const dot = document.getElementById('support-unread-dot');
+    if (unread && unread.length > 0) dot.classList.add('show');
+    else dot.classList.remove('show');
+  }
+
   function subscribeRealtime() {
-    supabaseClient
-      .channel('client-realtime')
+    supabaseClient.channel('client-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => loadMyTickets())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => loadChatMessages())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+        loadChatMessages();
+        checkUnreadAdminMessages();
+      })
       .subscribe();
   }
 
