@@ -256,6 +256,23 @@
 </head>
 <body>
 
+<!-- WARNING MODAL POPUP FOR 2ND CHANGE ATTEMPT -->
+<div id="negotiation-warning-modal" class="modal-overlay" style="display: none;">
+  <div class="card" style="width:100%; max-width:440px; margin-bottom:0; border: 1px solid var(--warning);">
+    <div style="text-align:center; margin-bottom:12px;">
+      <div style="font-size:36px; margin-bottom:8px;">⚠️</div>
+      <h3 style="font-size:18px; font-weight:700; color:var(--warning);">Final Schedule Change Warning</h3>
+    </div>
+    <p style="font-size:14px; color:var(--text-main); line-height:1.5; text-align:center; margin-bottom:16px;">
+      You are changing your slot for the <strong>2nd time</strong>. If you try to change the time slot a <strong>3rd time</strong>, your session will be <strong>automatically cancelled</strong>.
+    </p>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-secondary" style="margin-top:0;" onclick="closeWarningModal()">Go Back</button>
+      <button class="btn" style="margin-top:0; background:var(--warning); color:#000;" onclick="confirmWarningAndSubmit()">I Understand, Submit Slot</button>
+    </div>
+  </div>
+</div>
+
 <!-- AUTH / LOGIN MODAL -->
 <div id="auth-modal" class="modal-overlay">
   <div class="card" style="width:100%; max-width:420px; margin-bottom:0;">
@@ -439,6 +456,7 @@
   let turnstileToken = null;
   let myTickets = [];
   let isSendingUserMsg = false;
+  let pendingNegotiation = null;
 
   function onTurnstileSuccess(token) { turnstileToken = token; }
 
@@ -623,9 +641,9 @@
       alertBox.className = 'cancellation-banner';
       alertBox.innerHTML = `
         <div>
-          <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed by Admin</strong>
+          <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed</strong>
           <p style="font-size: 13px; margin-top: 4px; line-height: 1.4;">
-            Your session <strong>#TCK-${cancelledTicket.ticket_number}</strong> was closed. <br>
+            Your session <strong>#TCK-${cancelledTicket.ticket_number}</strong> was cancelled/closed. <br>
             <strong>Reason:</strong> ${cancelledTicket.admin_comment || 'No specific reason provided.'}
           </p>
         </div>
@@ -804,29 +822,58 @@
 
   async function proposeNewTime(ticketId, currentCount) {
     const rawVal = document.getElementById('counter-time-input').value;
-    if (!rawVal) return alert("Select date and time.");
+    if (!rawVal) return alert("Select date and time first.");
 
     const dateObj = new Date(rawVal);
     if (isNaN(dateObj.getTime())) return alert("Invalid date selected.");
 
+    const isoTime = dateObj.toISOString();
     const newCount = currentCount + 1;
-    if (newCount >= 2) {
+
+    // IF THIRD CHANGE ATTEMPT -> AUTO CANCEL
+    if (newCount >= 3) {
       await supabaseClient.from('tickets').update({
         status: 'Cancelled',
-        admin_comment: 'Auto-cancelled: Maximum negotiation limit (2 attempts) reached.',
+        admin_comment: 'Auto-cancelled: Reached maximum slot change limit (3 attempts).',
         negotiation_count: newCount
       }).eq('id', ticketId);
-      alert("Session cancelled automatically because maximum negotiation attempts were reached.");
-    } else {
-      const isoTime = dateObj.toISOString();
-      await supabaseClient.from('tickets').update({
-        status: 'Submitted',
-        pref_time: isoTime,
-        offered_time: null,
-        negotiation_count: newCount
-      }).eq('id', ticketId);
+      alert("Session cancelled automatically because maximum change attempts were reached.");
+      loadMyTickets();
+      return;
     }
+
+    // IF SECOND CHANGE ATTEMPT -> SHOW WARNING MODAL BEFORE SUBMITTING
+    if (newCount === 2) {
+      pendingNegotiation = { ticketId, isoTime, newCount };
+      document.getElementById('negotiation-warning-modal').style.display = 'flex';
+      return;
+    }
+
+    // FIRST CHANGE ATTEMPT -> EXECUTE DIRECTLY
+    await executeProposal(ticketId, isoTime, newCount);
+  }
+
+  async function executeProposal(ticketId, isoTime, newCount) {
+    await supabaseClient.from('tickets').update({
+      status: 'Submitted',
+      pref_time: isoTime,
+      offered_time: null,
+      negotiation_count: newCount
+    }).eq('id', ticketId);
     loadMyTickets();
+  }
+
+  async function confirmWarningAndSubmit() {
+    if (!pendingNegotiation) return;
+    const { ticketId, isoTime, newCount } = pendingNegotiation;
+    document.getElementById('negotiation-warning-modal').style.display = 'none';
+    pendingNegotiation = null;
+    await executeProposal(ticketId, isoTime, newCount);
+  }
+
+  function closeWarningModal() {
+    document.getElementById('negotiation-warning-modal').style.display = 'none';
+    pendingNegotiation = null;
   }
 
   async function cancelTicket(ticketId) {
