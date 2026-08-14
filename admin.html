@@ -634,7 +634,7 @@
           m && 
           m.user_id === uId && 
           m.sender_role === 'user' && 
-          m.status !== 'read'
+          m.status === 'unread'
         );
 
         const item = document.createElement('div');
@@ -735,7 +735,7 @@
         user_id: activeChatUserId,
         sender_role: 'admin',
         message: msg,
-        status: 'read'
+        status: 'unread'
       }]).select('*').single();
 
       if (error) {
