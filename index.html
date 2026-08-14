@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Cloudflare Turnstile API Script -->
+  <!-- Cloudflare Turnstile -->
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
@@ -75,7 +75,6 @@
     .card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: #fff; }
     .card-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px; }
 
-    /* AUTH TOGGLE TABS */
     .auth-toggle-container {
       display: flex; background: #09090b; border: 1px solid var(--card-border);
       border-radius: 10px; padding: 4px; margin-bottom: 20px;
@@ -100,6 +99,8 @@
       border-radius: 12px; padding: 14px; margin-top: 10px; font-size: 0.85rem;
     }
 
+    .action-button-group { display: flex; gap: 10px; margin-top: 12px; }
+
     .discord-box {
       margin-top: 14px; padding: 16px; border-radius: 12px;
       background: rgba(88, 101, 242, 0.12); border: 1px solid var(--discord-purple);
@@ -110,12 +111,7 @@
     input, textarea, select { width: 100%; padding: 12px; margin-bottom: 16px; background: #09090b; border: 1px solid var(--card-border); border-radius: 10px; font-size: 16px; color: #ffffff; color-scheme: dark; }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent-lime); box-shadow: 0 0 10px var(--accent-lime-glow); }
 
-    .turnstile-wrapper {
-      margin-bottom: 16px;
-      display: flex;
-      justify-content: center;
-      min-height: 65px;
-    }
+    .turnstile-wrapper { margin-bottom: 16px; display: flex; justify-content: center; min-height: 65px; }
 
     .btn { padding: 12px 18px; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.9rem; width: 100%; text-decoration: none; }
     .btn-lime { background: var(--accent-lime); color: #000000; }
@@ -132,7 +128,7 @@
     .mobile-bottom-nav {
       position: fixed; bottom: 0; left: 0; right: 0; height: 62px;
       background: #09090b; border-top: 1px solid var(--card-border);
-      z-index: 9999; display: flex; justify-around: align-items: center;
+      z-index: 9999; display: flex; justify-content: space-around; align-items: center;
       padding: 4px 0; box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
     }
     .nav-tab {
@@ -164,7 +160,6 @@
       </h2>
       <p class="card-desc">Sign in or create an account to schedule therapy sessions.</p>
 
-      <!-- Auth Mode Switcher -->
       <div class="auth-toggle-container">
         <button type="button" class="auth-toggle-btn active" id="modeSigninBtn" onclick="switchAuthMode('signin')">Sign In</button>
         <button type="button" class="auth-toggle-btn" id="modeSignupBtn" onclick="switchAuthMode('signup')">Register</button>
@@ -177,13 +172,8 @@
         <label style="text-align: left;">Password</label>
         <input type="password" id="authPassword" placeholder="••••••••" required>
 
-        <!-- Cloudflare Turnstile Captcha Widget -->
         <div class="turnstile-wrapper">
-          <div class="cf-turnstile" 
-               data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" 
-               data-callback="onTurnstileSuccess" 
-               data-theme="dark">
-          </div>
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAAEPxPyu1FPsizObG" data-callback="onTurnstileSuccess" data-theme="dark"></div>
         </div>
 
         <button type="submit" id="authSubmitBtn" class="btn btn-lime">
@@ -282,7 +272,6 @@
 
   </div>
 
-  <!-- NAVIGATION BAR -->
   <nav id="bottomNav" class="mobile-bottom-nav hidden">
     <div class="nav-tab active" onclick="switchTab('tabOverview', this)"><i data-lucide="grid"></i><span>Overview</span></div>
     <div class="nav-tab" onclick="switchTab('tabBook', this)"><i data-lucide="calendar"></i><span>Book</span></div>
@@ -300,9 +289,8 @@
 
     let currentUser = null;
     let turnstileToken = null;
-    let currentAuthMode = 'signin'; // 'signin' or 'signup'
+    let currentAuthMode = 'signin';
 
-    // Cloudflare Turnstile Callback
     window.onTurnstileSuccess = function(token) {
       turnstileToken = token;
     };
@@ -391,14 +379,13 @@
       const email = document.getElementById('authEmail').value.trim();
       const password = document.getElementById('authPassword').value;
 
-      // Ensure CAPTCHA challenge is completed
       if (!turnstileToken) {
         showToast("Please complete the CAPTCHA verification to proceed.", "error");
         return;
       }
 
       const activeToken = turnstileToken;
-      turnstileToken = null; // Clear token immediately to prevent reuse
+      turnstileToken = null;
 
       if (currentAuthMode === 'signin') {
         const { error } = await supabaseClient.auth.signInWithPassword({ 
@@ -447,6 +434,34 @@
       lucide.createIcons();
     }
 
+    async function acceptTimeSlot(ticketId) {
+      const { error } = await supabaseClient
+        .from('tickets')
+        .update({ status: 'Time Slot Offered and Accepted' })
+        .eq('id', ticketId);
+
+      if (error) {
+        showToast(error.message, 'error');
+      } else {
+        showToast("Time slot accepted! Awaiting final confirmation.");
+        fetchUserTickets();
+      }
+    }
+
+    async function rejectTimeSlot(ticketId) {
+      const { error } = await supabaseClient
+        .from('tickets')
+        .update({ status: 'Time Slot Rejected - Ask new slot' })
+        .eq('id', ticketId);
+
+      if (error) {
+        showToast(error.message, 'error');
+      } else {
+        showToast("Time slot rejected. Support/Admin will review your request.");
+        fetchUserTickets();
+      }
+    }
+
     async function fetchUserTickets() {
       const { data: tickets } = await supabaseClient
         .from('tickets')
@@ -464,9 +479,18 @@
       }
 
       const activeTicket = tickets[0];
-      const statusMap = { 'Submitted': 1, 'Time Slot Offered': 2, 'Scheduled': 3, 'Confirmed': 4, 'Closed': 4 };
-      const currentStep = statusMap[activeTicket.status] || 1;
-
+      
+      const statusStepMap = { 
+        'Submitted': 1, 
+        'Time Slot Offered': 2, 
+        'Time Slot Rejected - Ask new slot': 2, 
+        'Time Slot Offered and Accepted': 3,
+        'Scheduled': 3, 
+        'Confirmed': 4, 
+        'Closed': 4 
+      };
+      
+      const currentStep = statusStepMap[activeTicket.status] || 1;
       const isConfirmedOrScheduled = (activeTicket.status === 'Confirmed' || activeTicket.status === 'Scheduled' || activeTicket.status === 'Closed');
 
       const discordBlock = `
@@ -479,6 +503,20 @@
         </div>
       `;
 
+      let slotActions = '';
+      if (activeTicket.status === 'Time Slot Offered') {
+        slotActions = `
+          <div class="action-button-group">
+            <button onclick="acceptTimeSlot('${activeTicket.id}')" class="btn btn-lime" style="flex:1;">
+              <i data-lucide="check"></i> Accept Slot
+            </button>
+            <button onclick="rejectTimeSlot('${activeTicket.id}')" class="btn btn-danger" style="flex:1;">
+              <i data-lucide="x"></i> Reject & Ask New Slot
+            </button>
+          </div>
+        `;
+      }
+
       pipelineContainer.innerHTML = `
         <div class="pipeline-step ${currentStep >= 1 ? 'active' : ''}">
           <div class="step-icon"><i data-lucide="${currentStep >= 1 ? 'check' : 'circle'}"></i></div>
@@ -490,7 +528,7 @@
         </div>
         <div class="pipeline-step ${currentStep >= 3 ? 'active' : ''}">
           <div class="step-icon"><i data-lucide="${currentStep >= 3 ? 'check' : 'circle'}"></i></div>
-          <span>3. Scheduled</span>
+          <span>3. Accepted & Scheduled</span>
         </div>
         <div class="pipeline-step ${currentStep >= 4 ? 'active' : ''}">
           <div class="step-icon"><i data-lucide="${currentStep >= 4 ? 'check' : 'circle'}"></i></div>
@@ -501,8 +539,9 @@
           <p><strong>Ticket Ref:</strong> ${activeTicket.ticket_number}</p>
           <p><strong>Status:</strong> <span style="color: var(--accent-lime);">${activeTicket.status}</span></p>
           <p style="margin-top: 4px; color: var(--text-muted);">
-            Slot: ${activeTicket.pref_time ? new Date(activeTicket.pref_time).toLocaleString() : 'Pending Confirmation'}
+            Offered Slot: ${activeTicket.pref_time ? new Date(activeTicket.pref_time).toLocaleString() : 'Pending'}
           </p>
+          ${slotActions}
         </div>
 
         ${isConfirmedOrScheduled ? discordBlock : ''}
@@ -517,11 +556,6 @@
           <p style="color: var(--text-muted); margin-top: 4px; font-size: 0.8rem;">
             ${new Date(t.created_at).toLocaleDateString()}
           </p>
-          ${(t.status === 'Confirmed' || t.status === 'Scheduled') ? `
-            <a href="${DISCORD_INVITE_URL}" target="_blank" rel="noopener noreferrer" class="btn btn-discord" style="margin-top: 10px; padding: 8px 12px; font-size: 0.78rem;">
-              <i data-lucide="message-square"></i> Join Discord
-            </a>
-          ` : ''}
         </div>
       `).join('');
 
@@ -586,9 +620,22 @@
       fetchChatMessages();
     }
 
+    // REAL-TIME WEBSOCKET LISTENERS
     function setupRealtime() {
-      supabaseClient.channel('client:tickets').on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => fetchUserTickets()).subscribe();
-      supabaseClient.channel('client:chats').on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => fetchChatMessages()).subscribe();
+      supabaseClient
+        .channel('client-realtime-tickets')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' }, () => {
+          fetchUserTickets();
+          showToast("Booking status updated automatically!", "success");
+        })
+        .subscribe();
+
+      supabaseClient
+        .channel('client-realtime-chats')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_messages' }, () => {
+          fetchChatMessages();
+        })
+        .subscribe();
     }
 
     init();
