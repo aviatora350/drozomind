@@ -555,15 +555,20 @@
     document.getElementById(`view-${tabName}`).classList.add('active');
 
     if (tabName === 'support') {
-      await supabaseClient
-        .from('chat_messages')
-        .update({ status: 'read' })
-        .eq('user_id', currentUserId)
-        .eq('sender_role', 'admin')
-        .eq('status', 'unread');
-
-      document.getElementById('support-unread-dot').classList.remove('show');
+      await markAdminMessagesAsRead();
     }
+  }
+
+  async function markAdminMessagesAsRead() {
+    if (!currentUserId) return;
+    await supabaseClient
+      .from('chat_messages')
+      .update({ status: 'read' })
+      .eq('user_id', currentUserId)
+      .eq('sender_role', 'admin')
+      .eq('status', 'unread');
+
+    document.getElementById('support-unread-dot').classList.remove('show');
   }
 
   async function loadMyTickets() {
@@ -845,6 +850,10 @@
     });
 
     container.scrollTop = container.scrollHeight;
+
+    if (document.getElementById('view-support').classList.contains('active')) {
+      markAdminMessagesAsRead();
+    }
   }
 
   async function sendChatMessage() {
@@ -864,6 +873,11 @@
   }
 
   async function checkUnreadAdminMessages() {
+    if (document.getElementById('view-support').classList.contains('active')) {
+      await markAdminMessagesAsRead();
+      return;
+    }
+
     const { data: unread } = await supabaseClient
       .from('chat_messages')
       .select('id')
