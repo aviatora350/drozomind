@@ -106,6 +106,12 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
+      transition: all 0.3s ease;
+    }
+    .cancellation-banner.pinned {
+      border: 1px solid var(--primary);
+      background: rgba(155, 240, 11, 0.08);
+      box-shadow: 0 0 12px rgba(155, 240, 11, 0.15);
     }
 
     .pipeline-list { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
@@ -177,6 +183,8 @@
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .btn-secondary { background: var(--card-bg); color: var(--text-main); border: 1px solid var(--card-border); }
     .btn-danger { background: var(--danger); color: #fff; }
+    .btn-pin { background: rgba(255, 255, 255, 0.1); color: var(--text-main); border: 1px solid var(--card-border); padding: 6px 12px; font-size: 12px; border-radius: 8px; cursor: pointer; }
+    .btn-pin.pinned { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
     .btn-sm { width: auto; padding: 6px 14px; margin-top: 0; font-size: 12px; }
 
     .tab-view { display: none; }
@@ -627,34 +635,63 @@
     }
   }
 
+  /* PIN NOTICE FEATURE FOR CLOSED/CANCELLED TICKETS */
   function renderCancellationAlerts() {
     const container = document.getElementById('cancellation-alert-container');
     container.innerHTML = '';
 
-    const cancelledTicket = myTickets.find(t => 
+    const closedTickets = myTickets.filter(t => 
       (t.status === 'Cancelled' || t.status === 'Closed') && 
       !localStorage.getItem(`dismissed_ticket_${t.id}`)
     );
 
-    if (cancelledTicket) {
+    // Sort so pinned tickets stay on top
+    closedTickets.sort((a, b) => {
+      const isPinnedA = localStorage.getItem(`pinned_ticket_${a.id}`) === 'true';
+      const isPinnedB = localStorage.getItem(`pinned_ticket_${b.id}`) === 'true';
+      return isPinnedB - isPinnedA;
+    });
+
+    closedTickets.forEach(ticket => {
+      const isPinned = localStorage.getItem(`pinned_ticket_${ticket.id}`) === 'true';
+
       const alertBox = document.createElement('div');
-      alertBox.className = 'cancellation-banner';
+      alertBox.className = `cancellation-banner ${isPinned ? 'pinned' : ''}`;
       alertBox.innerHTML = `
         <div>
-          <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed</strong>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <strong style="color: var(--danger); font-size: 14px;">⚠️ Session Closed</strong>
+            ${isPinned ? '<span style="font-size: 10px; font-weight: 700; background: var(--primary); color: var(--primary-text); padding: 2px 6px; border-radius: 6px;">📌 PINNED</span>' : ''}
+          </div>
           <p style="font-size: 13px; margin-top: 4px; line-height: 1.4;">
-            Your session <strong>#TCK-${cancelledTicket.ticket_number}</strong> was cancelled/closed. <br>
-            <strong>Reason:</strong> ${cancelledTicket.admin_comment || 'No specific reason provided.'}
+            Your session <strong>#TCK-${ticket.ticket_number}</strong> was cancelled/closed. <br>
+            <strong>Reason:</strong> ${ticket.admin_comment || 'No specific reason provided.'}
           </p>
         </div>
-        <button class="btn btn-danger btn-sm" onclick="dismissCancellationNotice('${cancelledTicket.id}')">Dismiss</button>
+        <div style="display: flex; gap: 6px; flex-direction: column; align-items: flex-end;">
+          <button class="btn-pin ${isPinned ? 'pinned' : ''}" onclick="togglePinNotice('${ticket.id}')">
+            ${isPinned ? '📌 Pinned' : '📌 Pin'}
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="dismissCancellationNotice('${ticket.id}')">Dismiss</button>
+        </div>
       `;
       container.appendChild(alertBox);
+    });
+  }
+
+  function togglePinNotice(ticketId) {
+    const isPinned = localStorage.getItem(`pinned_ticket_${ticketId}`) === 'true';
+    if (isPinned) {
+      localStorage.removeItem(`pinned_ticket_${ticketId}`);
+    } else {
+      localStorage.setItem(`pinned_ticket_${ticketId}`, 'true');
     }
+    renderCancellationAlerts();
   }
 
   function dismissCancellationNotice(ticketId) {
     localStorage.setItem(`dismissed_ticket_${ticketId}`, 'true');
+    localStorage.removeItem(`pinned_ticket_${ticketId}`);
     renderCancellationAlerts();
     renderActivePipeline();
   }
